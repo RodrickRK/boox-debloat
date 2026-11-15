@@ -90,6 +90,41 @@ Backups are saved here:
 
 Set it from the **file browser**. The hidden Wallpaper Settings page crashes on this model.
 
+### Google Play
+
+The Star Education firmware isn't certified by Google, so Play Store may say **"This device isn't Play Protect certified"** or refuse to sign in. Boox Debloat never removes Google Play, Play Services or Google Services Framework, so this isn't caused by debloating. To fix it, register the tablet with Google:
+
+1. Sign in to a Google account on the tablet (Settings, then Accounts), or at least open Play Store once.
+2. With the tablet connected and USB debugging on, get its Google Services Framework (GSF) ID:
+
+   ```bash
+   adb shell 'content query --uri content://com.google.android.gsf.gservices --where "name=\"android_id\""'
+   ```
+
+   The number after `value=` is the GSF ID, a long number like `3812345678901234567`.
+3. On your computer, open [google.com/android/uncertified](https://www.google.com/android/uncertified), sign in with the same Google account, paste the GSF ID and choose **Register**.
+4. Wait 10 to 30 minutes. Google can take a few hours.
+5. On the tablet, open **Settings**, then **Apps**, and for **Google Play Store** and **Google Play services**:
+   - tap **Force stop**,
+   - open **Storage** and tap **Clear data** (or **Clear storage**).
+6. Restart the tablet, open Play Store and sign in again.
+
+Or do step 5 from your computer:
+
+```bash
+adb shell am force-stop com.android.vending
+adb shell am force-stop com.google.android.gms
+adb shell pm clear com.android.vending
+adb shell pm clear com.google.android.gms
+adb reboot
+```
+
+Clearing Play services' data signs you out of Google on the tablet; sign in again after the restart.
+
+A factory reset or firmware update gives the tablet a new GSF ID. Register the new one the same way.
+
+If Play Store installs an app but the app closes straight away with a licence error, the app uses Google's licence check, which can fail on uncertified firmware. Install it from [Aurora Store](https://f-droid.org/packages/com.aurora.store/) or the developer's own site instead.
+
 ### Try it without a tablet
 
 ```bash
@@ -146,11 +181,16 @@ On a Mac, the first run may say the app is from an unidentified developer. Right
 
 ## Troubleshooting
 
+**Help and FAQ** in the app's left panel opens these instructions and answers in a new tab.
+
+To report a problem, choose **Copy logs** in the left panel, then paste them into [a new issue](https://github.com/RodrickRK/boox-debloat/issues/new) with what you tried. The logs only cover this run of the app. They show just the last four characters of the tablet's serial number and hide your user folder.
+
 - **"Plug in your tablet" doesn't go away.** Check that USB Debug Mode is on and the cable carries data, then press **Refresh**. Run `adb devices` to see whether your computer can see the tablet.
 - **"Install Android platform tools".** adb is missing. Use the button on that screen, or [download it from Google](https://developer.android.com/tools/releases/platform-tools) and press **Refresh**.
 - **"Waiting for USB permission".** Unlock the tablet and tap **Allow** on the prompt.
 - **Windows doesn't see the tablet.** Install the [Google USB driver](https://developer.android.com/studio/run/win-usb), then unplug and replug the tablet.
 - **"This page has expired".** Close the page and run `boox-debloat` again. Each run opens a new address.
+- **"This device isn't Play Protect certified".** Register the tablet's GSF ID with Google, then force stop and clear data for Play Store and Play services. See [Google Play](#google-play).
 - **Setting a sleep picture hangs on "Processing…".** Bring back **Onyx sync (ksync)** under **Always kept**, restart the tablet, and use a 758 × 1024 picture.
 
 ## Build from source

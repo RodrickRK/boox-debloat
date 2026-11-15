@@ -3,6 +3,8 @@ package main
 import (
 	"image"
 	"image/color"
+	"os"
+	"strings"
 	"testing"
 )
 
@@ -139,5 +141,24 @@ func TestSafeName(t *testing.T) {
 		if got := safeName(in); got != want {
 			t.Errorf("safeName(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+func TestActivityLogKeepsLast(t *testing.T) {
+	l := &activityLog{max: 3}
+	for i := 0; i < 5; i++ {
+		l.add("line %d", i)
+	}
+	got := l.text()
+	if strings.Contains(got, "line 1") || !strings.Contains(got, "line 4") {
+		t.Fatalf("unexpected log: %q", got)
+	}
+}
+
+func TestPrivateHidesSerialAndHome(t *testing.T) {
+	home, _ := os.UserHomeDir()
+	got := private("serial 2308C69HDM09563 at "+home+"/x", "2308C69HDM09563")
+	if strings.Contains(got, "2308C69HDM0") || strings.Contains(got, home) {
+		t.Fatalf("not hidden: %q", got)
 	}
 }

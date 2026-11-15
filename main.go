@@ -52,6 +52,10 @@ func main() {
 		}
 	}
 
+	logs := newActivityLog()
+	logs.add("Started boox-debloat %s", version)
+	be = loggedBackend{Backend: be, log: logs}
+
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", *port))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Couldn't start:", err)
@@ -66,6 +70,7 @@ func main() {
 		demo:    *demo,
 		serial:  *serial,
 		version: version,
+		log:     logs,
 	}
 	srv := &http.Server{Handler: s.routes(), ReadHeaderTimeout: 10 * time.Second}
 

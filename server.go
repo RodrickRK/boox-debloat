@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -34,6 +35,9 @@ type Server struct {
 	version  string
 	mu       sync.Mutex // one tablet command sequence at a time
 	lastPing atomic.Int64
+	log      *activityLog
+	lastConn string // last connection state written to the log
+	lastDev  statusResp
 }
 
 func (s *Server) routes() http.Handler {
@@ -47,6 +51,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/reboot", s.api(http.MethodPost, s.handleReboot))
 	mux.HandleFunc("/api/picture", s.api(http.MethodPost, s.handlePicture))
 	mux.HandleFunc("/api/install-adb", s.api(http.MethodPost, s.handleInstallAdb))
+	mux.HandleFunc("/api/logs", s.api(http.MethodGet, s.handleLogs))
 	mux.HandleFunc("/api/ping", s.api(http.MethodPost, func(w http.ResponseWriter, r *http.Request) {
 		s.lastPing.Store(time.Now().Unix())
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
@@ -79,7 +84,16 @@ func (s *Server) api(method string, h http.HandlerFunc) http.HandlerFunc {
 			writeErr(w, http.StatusUnauthorized, "This page has expired. Close it and run boox-debloat again.")
 			return
 		}
-		h(w, r)
+		rec := &statusRecorder{ResponseWriter: w, code: http.StatusOK}
+		h(rec, r)
+		if rec.code >= 400 {
+			msg := rec.body.String()
+			var e struct{ Error string }
+			if json.Unmarshal([]byte(msg), &e) == nil && e.Error != "" {
+				msg = e.Error
+			}
+			s.log.add("%s %s failed (%d): %s", r.Method, r.URL.Path, rec.code, oneLine(msg, 300))
+		}
 	}
 }
 
@@ -147,12 +161,17 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	if !resp.Adb {
 		resp.State = "none"
 		resp.Installer, _ = adbInstaller()
+		s.noteConn(resp)
 		writeJSON(w, http.StatusOK, resp)
 		return
 	}
 	dev, state, err := s.pickDevice()
 	resp.State = state
+	if err != nil {
+		s.log.add("adb devices: error: %v", err)
+	}
 	if err != nil || state != "device" {
+		s.noteConn(resp)
 		writeJSON(w, http.StatusOK, resp)
 		return
 	}
@@ -161,7 +180,32 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	resp.Firmware = s.prop(dev.Serial, "ro.build.display.id")
 	resp.Android = s.prop(dev.Serial, "ro.build.version.release")
 	resp.Supported = resp.Model == s.cat.Model
+	s.noteConn(resp)
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// noteConn writes a log line when the connection changes. Caller holds s.mu.
+func (s *Server) noteConn(r statusResp) {
+	key := r.State
+	switch {
+	case !r.Adb:
+		key = "no-adb"
+	case r.State == "device":
+		key = "device " + r.Serial
+		s.lastDev = r
+	}
+	if key == s.lastConn {
+		return
+	}
+	s.lastConn = key
+	switch {
+	case !r.Adb:
+		s.log.add("adb isn't installed")
+	case r.State == "device":
+		s.log.add("Connected: %s, %s, Android %s, supported: %v", r.Model, r.Firmware, r.Android, r.Supported)
+	default:
+		s.log.add("Tablet: %s", r.State)
+	}
 }
 
 // readyDevice returns the connected tablet, or writes an error and returns
@@ -438,6 +482,44 @@ func (s *Server) handlePicture(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"name": name, "path": remote, "width": b.Dx(), "height": b.Dy(), "bytes": len(data),
 	})
+}
+
+// ---------------------------------------------------------------------------
+// Logs
+// ---------------------------------------------------------------------------
+
+// handleLogs returns a plain-text report to paste into a bug report.
+func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	dev := s.lastDev
+	s.mu.Unlock()
+	var b strings.Builder
+	fmt.Fprintf(&b, "boox-debloat %s on %s/%s\n", s.version, runtime.GOOS, runtime.GOARCH)
+	if s.demo {
+		b.WriteString("Demo mode\n")
+	}
+	if ab, ok := s.be.(loggedBackend); ok {
+		if real, ok := ab.Backend.(*adbBackend); ok {
+			path := real.path
+			if path == "" {
+				path = "not found"
+			}
+			fmt.Fprintf(&b, "adb: %s\n", path)
+		}
+	}
+	if dev.Model != "" {
+		fmt.Fprintf(&b, "Tablet: %s, %s, Android %s, serial %s\n", dev.Model, dev.Firmware, dev.Android, dev.Serial)
+	}
+	b.WriteString("\n")
+	if t := s.log.text(); t != "" {
+		b.WriteString(t)
+	} else {
+		b.WriteString("Nothing has happened yet.")
+	}
+	b.WriteString("\n")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	io.WriteString(w, private(b.String(), dev.Serial))
 }
 
 // ---------------------------------------------------------------------------

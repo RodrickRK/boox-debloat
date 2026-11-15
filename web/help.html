@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boox Debloat Help</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Libre+Baskerville&family=Literata:opsz,wght@7..72,500;7..72,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="help">
+<div class="help-page">
+
+  <header class="help-head">
+    <img src="icon.svg" alt="" width="48" height="48">
+    <h1>Help and FAQ</h1>
+    <p class="help-lede">How to connect the C69 M Star, use the app, and fix the usual problems.</p>
+    <nav class="help-toc" aria-label="On this page">
+      <a href="#connect">Connect the tablet</a>
+      <a href="#use">Use the app</a>
+      <a href="#sleep">Sleep picture</a>
+      <a href="#play">Google Play</a>
+      <a href="#faq">Questions</a>
+      <a href="#report">Report a problem</a>
+    </nav>
+  </header>
+
+  <section id="connect">
+    <h2>Connect the tablet</h2>
+    <ol class="steps">
+      <li>On the tablet, open <strong>Apps</strong>, tap the menu at the top right, then <strong>App management</strong>.</li>
+      <li>Turn on <strong>USB Debug Mode</strong>.</li>
+      <li>Connect the tablet to your computer with a USB cable that carries data. Some charging-only cables don't.</li>
+      <li>When the tablet asks <strong>Allow USB debugging?</strong>, tap <strong>Allow</strong> and tick <strong>Always allow from this computer</strong>.</li>
+      <li>Back in the app, the dot next to <strong>Connected</strong> fills in. Press <strong>Refresh</strong> to check straight away.</li>
+    </ol>
+    <p>If the app says <strong>Install Android platform tools</strong>, adb is missing. Use the install button on that screen, or <a href="https://developer.android.com/tools/releases/platform-tools" target="_blank" rel="noopener noreferrer">download it from Google</a>, then press Refresh.</p>
+  </section>
+
+  <section id="use">
+    <h2>Use the app</h2>
+    <ol class="steps">
+      <li><strong>Choose apps.</strong> Switch off the apps you want removed, or use <strong>Remove all</strong>. Apps under <strong>Always kept</strong> can't be removed.</li>
+      <li><strong>Review changes</strong>, check the list, then <strong>Apply to tablet</strong>. Your app list is saved as a backup first.</li>
+      <li><strong>Restart the tablet</strong> when it asks, or any time with <strong>Restart tablet</strong>.</li>
+    </ol>
+    <p>To bring an app back, switch it on again and apply, or use <strong>Restore all apps</strong>.</p>
+  </section>
+
+  <section id="sleep">
+    <h2>Sleep picture</h2>
+    <ol class="steps">
+      <li>Drop a picture onto the drawing of the tablet, or use <strong>Choose picture</strong>.</li>
+      <li>Keep <strong>Fit to screen</strong> on. The picture is resized to 758 × 1024, the tablet's screen size.</li>
+      <li>Choose <strong>Send to tablet</strong>.</li>
+      <li>On the tablet, open <strong>Storage</strong>, then <strong>Pictures</strong>, long-press the picture and set it as the screensaver.</li>
+    </ol>
+    <p>Set it from the file browser. The hidden Wallpaper Settings page crashes on this model.</p>
+  </section>
+
+  <section id="play">
+    <h2>Google Play</h2>
+    <p>The Star Education firmware isn't certified by Google, so Play Store may say <strong>This device isn't Play Protect certified</strong>. Debloating doesn't cause it: the app never removes Google Play, Play services or Google Services Framework.</p>
+    <ol class="steps">
+      <li>Sign in to a Google account on the tablet, or open Play Store once.</li>
+      <li>Get the tablet's GSF ID. In Terminal or PowerShell, run:
+        <pre><code>adb shell 'content query --uri content://com.google.android.gsf.gservices --where "name=\"android_id\""'</code></pre>
+        The long number after <code>value=</code> is the GSF ID.</li>
+      <li>Open <a href="https://www.google.com/android/uncertified" target="_blank" rel="noopener noreferrer">google.com/android/uncertified</a>, sign in with the same account, paste the ID and choose <strong>Register</strong>.</li>
+      <li>Wait 10 to 30 minutes. It can take a few hours.</li>
+      <li>On the tablet, open <strong>Settings</strong>, then <strong>Apps</strong>. For <strong>Google Play Store</strong> and <strong>Google Play services</strong>, tap <strong>Force stop</strong>, then open <strong>Storage</strong> and tap <strong>Clear data</strong>.</li>
+      <li>Restart the tablet, open Play Store and sign in again.</li>
+    </ol>
+    <p>Clearing Play services' data signs you out of Google on the tablet. A factory reset or firmware update gives the tablet a new GSF ID, so register again after one.</p>
+  </section>
+
+  <section id="faq">
+    <h2>Questions</h2>
+
+    <details>
+      <summary>Is removing apps safe? Can I undo it?</summary>
+      <p>Yes. Apps are removed only for your user with <code>pm uninstall --user 0</code>. Nothing is deleted from the tablet, and every app comes back with its switch or with <strong>Restore all apps</strong>. A factory reset also brings them all back.</p>
+    </details>
+
+    <details>
+      <summary>Why can't I remove the apps under Always kept?</summary>
+      <p>The sleep screen, firmware updates and Google Play need them. Removing them breaks those features, so the app only lets you bring them back.</p>
+    </details>
+
+    <details>
+      <summary>What is Onyx sync (ksync), and why does it matter?</summary>
+      <p>Older debloat guides removed it. Without it, setting a sleep picture hangs on <strong>Processing…</strong> or doesn't work. If the app shows it under Always kept with <strong>Bring back</strong>, use that, apply, and restart the tablet.</p>
+    </details>
+
+    <details>
+      <summary>Do the Android test components affect Play Protect?</summary>
+      <p>No. The two Android test components are empty placeholders used by Google's compatibility tests. Play Protect certification depends on the firmware and the GSF ID registration. See <a href="#play">Google Play</a>.</p>
+    </details>
+
+    <details>
+      <summary>The app says "Plug in your tablet" and nothing happens</summary>
+      <p>Check that USB Debug Mode is on and that the cable carries data, then press <strong>Refresh</strong>. Try a different USB port. Running <code>adb devices</code> in a terminal shows whether your computer can see the tablet.</p>
+    </details>
+
+    <details>
+      <summary>It says "Waiting for USB permission"</summary>
+      <p>Unlock the tablet and tap <strong>Allow</strong> on the prompt. If you don't see one, unplug the tablet and plug it in again.</p>
+    </details>
+
+    <details>
+      <summary>Windows doesn't see the tablet</summary>
+      <p>Install the <a href="https://developer.android.com/studio/run/win-usb" target="_blank" rel="noopener noreferrer">Google USB driver</a>, then unplug and replug the tablet.</p>
+    </details>
+
+    <details>
+      <summary>It says "This page has expired"</summary>
+      <p>Each run of boox-debloat opens a new private address. Close the page and run <code>boox-debloat</code> again.</p>
+    </details>
+
+    <details>
+      <summary>An app from Play Store closes straight away</summary>
+      <p>Some apps run Google's licence check, which can fail on uncertified firmware. Install the app from Aurora Store or the developer's own site instead.</p>
+    </details>
+
+    <details>
+      <summary>Where are the backups?</summary>
+      <p>On a Mac, in <code>~/Library/Application Support/boox-debloat/backups</code>. On Windows, in <code>%AppData%\boox-debloat\backups</code>. A new one is saved before every change.</p>
+    </details>
+  </section>
+
+  <section id="report">
+    <h2>Report a problem</h2>
+    <ol class="steps">
+      <li>In the app, choose <strong>Copy logs</strong> in the left panel. It copies what the app did and what the tablet answered.</li>
+      <li>Open <a href="https://github.com/RodrickRK/boox-debloat/issues/new" target="_blank" rel="noopener noreferrer">a new issue on GitHub</a>, say what you tried, and paste the logs.</li>
+    </ol>
+    <p>The logs stay on your computer until you paste them. They show only the last four characters of the tablet's serial number and hide your user folder.</p>
+  </section>
+
+  <footer class="credit">
+    <p>Created by <a class="tekki" href="https://www.tekki.studio" target="_blank" rel="noopener noreferrer">tekki</a></p>
+    <a class="coffee" href="https://buymeacoffee.com/tekki.studio" target="_blank" rel="noopener noreferrer">
+      <img src="bmc-logo.svg" alt="" width="14" height="20">
+      <span>Buy me a coffee</span>
+    </a>
+  </footer>
+</div>
+</body>
+</html>

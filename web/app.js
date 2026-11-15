@@ -156,7 +156,8 @@ function renderMessage(status) {
   const key = title + (status.installer || "");
   if (box.dataset.key === key) return;
   box.dataset.key = key;
-  box.replaceChildren(el("h2", {}, title), ...body);
+  box.replaceChildren(el("h2", {}, title), ...body,
+    el("p", { class: "row-why" }, "Stuck? Read the ", el("a", { href: "help.html", target: "_blank", rel: "noopener" }, "help and FAQ"), "."));
 }
 
 function renderDevice(status) {
@@ -596,6 +597,43 @@ $("pictureForm").addEventListener("submit", async (e) => {
     btn.disabled = false;
     btn.textContent = "Send to tablet";
   }
+});
+
+// ---------------------------------------------------------------------------
+// Copy logs
+// ---------------------------------------------------------------------------
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (_) {
+    // Older browsers: copy through a hidden text box.
+    const box = el("textarea", { readonly: true, style: "position:fixed;opacity:0" });
+    box.value = text;
+    document.body.append(box);
+    box.select();
+    const ok = document.execCommand("copy");
+    box.remove();
+    return ok;
+  }
+}
+
+let copyTimer;
+$("copyLogs").addEventListener("click", async () => {
+  const note = $("copyNote");
+  note.classList.remove("bad");
+  try {
+    const res = await fetch("/api/logs", { headers: { "X-Token": token } });
+    if (!res.ok) throw new Error(res.status === 401 ? "Page expired. Run boox-debloat again." : "Couldn't read the logs.");
+    if (!(await copyText(await res.text()))) throw new Error("Couldn't copy. Try again.");
+    note.textContent = "Copied";
+  } catch (err) {
+    note.classList.add("bad");
+    note.textContent = err.message === "Failed to fetch" ? "The app isn't running." : err.message;
+  }
+  clearTimeout(copyTimer);
+  copyTimer = setTimeout(() => { note.textContent = ""; }, 4000);
 });
 
 // ---------------------------------------------------------------------------
