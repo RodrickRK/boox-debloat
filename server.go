@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/subtle"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
 	"image/png"
@@ -26,18 +28,19 @@ var webFiles embed.FS
 // Server serves the page and a small JSON API. It only listens on
 // 127.0.0.1, and every API call must carry the secret token from the URL.
 type Server struct {
-	cat      *Catalog
-	be       Backend
-	token    string
-	host     string // 127.0.0.1:port, checked against the Host header
-	demo     bool
-	serial   string // -serial flag, optional
-	version  string
-	mu       sync.Mutex // one tablet command sequence at a time
-	lastPing atomic.Int64
-	log      *activityLog
-	lastConn string // last connection state written to the log
-	lastDev  statusResp
+	cat        *Catalog
+	be         Backend
+	token      string
+	host       string // 127.0.0.1:port, checked against the Host header
+	demo       bool
+	serial     string // -serial flag, optional
+	version    string
+	mu         sync.Mutex // one tablet command sequence at a time
+	lastPing   atomic.Int64
+	log        *activityLog
+	lastConn   string // last connection state written to the log
+	lastDev    statusResp
+	installing atomic.Bool // an adb download is running
 }
 
 func (s *Server) routes() http.Handler {
@@ -109,18 +112,18 @@ func (s *Server) api(method string, h http.HandlerFunc) http.HandlerFunc {
 // ---------------------------------------------------------------------------
 
 type statusResp struct {
-	Adb       bool   `json:"adb"`
-	State     string `json:"state"` // none, unauthorized, offline, multiple, device
-	Serial    string `json:"serial,omitempty"`
-	Model     string `json:"model,omitempty"`
-	Firmware  string `json:"firmware,omitempty"`
-	Android   string `json:"android,omitempty"`
-	Supported bool   `json:"supported"`
-	Expected  string `json:"expected"`
-	Demo      bool   `json:"demo"`
-	Version   string `json:"version"`
-	OS        string `json:"os"`
-	Installer string `json:"installer,omitempty"` // brew or scoop, when adb is missing
+	Adb        bool   `json:"adb"`
+	State      string `json:"state"` // none, unauthorized, offline, multiple, device
+	Serial     string `json:"serial,omitempty"`
+	Model      string `json:"model,omitempty"`
+	Firmware   string `json:"firmware,omitempty"`
+	Android    string `json:"android,omitempty"`
+	Supported  bool   `json:"supported"`
+	Expected   string `json:"expected"`
+	Demo       bool   `json:"demo"`
+	Version    string `json:"version"`
+	OS         string `json:"os"`
+	CanInstall bool   `json:"canInstall,omitempty"` // adb is missing and can be downloaded from Google
 }
 
 // pickDevice chooses the tablet to work with. Caller must hold s.mu.
@@ -167,7 +170,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	resp := statusResp{Adb: s.be.Available(), Expected: s.cat.Model, Demo: s.demo, Version: s.version, OS: osName()}
 	if !resp.Adb {
 		resp.State = "none"
-		resp.Installer, _ = adbInstaller()
+		resp.CanInstall = canDownloadAdb()
 		s.noteConn(resp)
 		writeJSON(w, http.StatusOK, resp)
 		return
@@ -375,38 +378,50 @@ func (s *Server) handleReboot(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
-// handleInstallAdb installs Android platform tools with Homebrew or Scoop.
-// It only runs when adb is missing and the user pressed the button.
+// handleInstallAdb downloads Android platform tools from Google into the
+// app's own folder. It only runs when adb is missing and the user pressed
+// the button. It doesn't hold s.mu, so status checks keep answering.
 func (s *Server) handleInstallAdb(w http.ResponseWriter, r *http.Request) {
 	if s.demo {
 		writeErr(w, http.StatusConflict, "Demo mode doesn't install anything.")
 		return
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.be.Available() {
+	have := s.be.Available()
+	s.mu.Unlock()
+	if have {
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true, "already": true})
 		return
 	}
-	name, _ := adbInstaller()
-	if name == "" {
-		writeErr(w, http.StatusConflict, "No Homebrew or Scoop found. Download Android platform tools from Google instead.")
+	if !canDownloadAdb() {
+		writeErr(w, http.StatusConflict, "Google doesn't offer platform tools for this computer. Install adb with your package manager instead.")
 		return
 	}
-	out, err := installAdb()
-	if err != nil || !s.be.Available() {
-		tail := out
-		if len(tail) > 600 {
-			tail = "…" + tail[len(tail)-600:]
-		}
-		msg := "The install didn't finish."
-		if err != nil {
-			msg += " " + err.Error() + "."
-		}
-		writeJSON(w, http.StatusBadGateway, map[string]string{"error": msg, "output": strings.TrimSpace(tail)})
+	if !s.installing.CompareAndSwap(false, true) {
+		writeErr(w, http.StatusConflict, "The download is already running.")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "installer": name})
+	defer s.installing.Store(false)
+
+	s.log.add("Downloading Android platform tools from Google")
+	ctx, cancel := context.WithTimeout(r.Context(), downloadTimeout)
+	defer cancel()
+	err := downloadAdb(ctx)
+	if err == nil {
+		s.mu.Lock()
+		have = s.be.Available()
+		s.mu.Unlock()
+		if !have {
+			err = errors.New("adb was downloaded but won't start")
+		}
+	}
+	if err != nil {
+		s.log.add("Platform tools download failed: %v", err)
+		writeErr(w, http.StatusBadGateway, "The download didn't finish: "+err.Error()+".")
+		return
+	}
+	s.log.add("Platform tools installed")
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 // ---------------------------------------------------------------------------

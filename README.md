@@ -47,7 +47,7 @@ No Scoop yet? Install it from [scoop.sh](https://scoop.sh) first.
 
 Both install **adb** (Android platform tools), which the app uses to talk to the tablet.
 
-If adb is ever missing, the app shows an **Install Android platform tools** button that installs it with Homebrew or Scoop, plus a link to [download it from Google](https://developer.android.com/tools/releases/platform-tools).
+If adb is ever missing, the app shows a **Download Android platform tools** button. It downloads Google's official platform tools (about 10 MB) into the app's own settings folder, so it needs no Homebrew, Scoop or admin rights. You can also [download it from Google](https://developer.android.com/tools/releases/platform-tools) yourself.
 
 ## 2. Turn on USB debugging
 
@@ -169,6 +169,8 @@ scoop update boox-debloat
 
 Uninstalling the app doesn't change your tablet. Restore any apps you want back first.
 
+If the app downloaded platform tools for you, they stay in `~/Library/Application Support/boox-debloat/platform-tools` (Mac) or `%AppData%\boox-debloat\platform-tools` (Windows). Delete that folder to remove them.
+
 **Mac:**
 
 ```bash
@@ -188,8 +190,8 @@ scoop uninstall boox-debloat
    - Mac with Intel chip: `darwin_amd64.tar.gz`
    - Windows: `windows_amd64.zip`
 2. Unzip it.
-3. Install adb from Google's [Android SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools).
-4. Run `boox-debloat` from the unzipped folder in a terminal.
+3. Run `boox-debloat` from the unzipped folder in a terminal.
+4. If the app says adb is missing, press **Download Android platform tools**.
 
 On a Mac, the first run may say the app is from an unidentified developer. Right-click it in Finder, choose **Open**, then **Open** again.
 
@@ -200,7 +202,7 @@ On a Mac, the first run may say the app is from an unidentified developer. Right
 To report a problem, choose **Copy logs** in the left panel, then paste them into [a new issue](https://github.com/RodrickRK/boox-debloat/issues/new) with what you tried. The logs only cover this run of the app. They show just the last four characters of the tablet's serial number and hide your user folder.
 
 - **"Plug in your tablet" doesn't go away.** Check that USB Debug Mode is on and the cable carries data, then press **Refresh**. Run `adb devices` to see whether your computer can see the tablet.
-- **"Install Android platform tools".** adb is missing. Use the button on that screen, or [download it from Google](https://developer.android.com/tools/releases/platform-tools) and press **Refresh**.
+- **"Install Android platform tools".** adb is missing. Press **Download Android platform tools** on that screen, or [download it from Google](https://developer.android.com/tools/releases/platform-tools) and press **Refresh**.
 - **"Waiting for USB permission".** Unlock the tablet and tap **Allow** on the prompt.
 - **Windows doesn't see the tablet.** Install the [Google USB driver](https://developer.android.com/studio/run/win-usb), then unplug and replug the tablet.
 - **"This page has expired".** Close the page and run `boox-debloat` again. Each run opens a new address.

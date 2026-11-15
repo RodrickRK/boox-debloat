@@ -91,20 +91,20 @@ function usbDebugSteps() {
     el("li", {}, "Tap ", el("strong", {}, "Allow"), " when the tablet asks to allow USB debugging, and tick ", el("strong", {}, "Always allow from this computer"), "."));
 }
 
-// Shown when adb is missing: install with one click, or download it.
+// Shown when adb is missing: download it from Google with one click, or
+// install it by hand.
 function adbInstallBlock(status) {
-  const parts = [el("p", {}, "boox-debloat uses Android platform tools (adb) to talk to the tablet.")];
-  if (status.installer) {
-    const via = status.installer === "brew" ? "Homebrew" : "Scoop";
+  const parts = [el("p", {}, "boox-debloat uses Android platform tools (adb) to talk to the tablet. It's a free tool from Google.")];
+  if (status.canInstall) {
     const out = el("p", { class: "install-out", hidden: true });
-    const btn = el("button", { type: "button", class: "button" }, "Install Android platform tools");
+    const btn = el("button", { type: "button", class: "button" }, "Download Android platform tools");
     btn.addEventListener("click", async () => {
-      state.busy = true; // keep the page from redrawing while it installs
+      state.busy = true; // keep the page from redrawing while it downloads
       btn.disabled = true;
-      btn.textContent = "Installing…";
+      btn.textContent = "Downloading…";
       out.hidden = false;
       out.classList.remove("bad");
-      out.textContent = `Installing with ${via}. This can take a few minutes.`;
+      out.textContent = "Downloading from Google. This usually takes under a minute.";
       try {
         await postJSON("install-adb");
         out.textContent = "Installed. Looking for your tablet…";
@@ -119,11 +119,13 @@ function adbInstallBlock(status) {
         state.busy = false;
       }
     });
-    parts.push(el("div", { class: "install-row" }, btn, el("span", { class: "row-why" }, `Uses ${via}`)), out);
+    parts.push(el("div", { class: "install-row" }, btn, el("span", { class: "row-why" }, "About 10 MB. Kept in the app's own folder; no admin rights needed.")), out);
+    parts.push(el("p", { class: "row-why" }, "Already have adb somewhere else? Install it with ", el("code", {}, installCommand[status.os] || installCommand.linux), " or ",
+      el("a", { href: platformToolsURL, target: "_blank", rel: "noopener noreferrer" }, "download it from Google"), ", then press Refresh."));
   } else {
     parts.push(el("p", {}, "Install it with this command, then press Refresh:"), el("p", {}, el("code", {}, installCommand[status.os] || installCommand.linux)));
+    parts.push(el("p", {}, "Or ", el("a", { href: platformToolsURL, target: "_blank", rel: "noopener noreferrer" }, "download Android platform tools from Google"), ", then press Refresh."));
   }
-  parts.push(el("p", {}, "Or ", el("a", { href: platformToolsURL, target: "_blank", rel: "noopener noreferrer" }, "download Android platform tools from Google"), ", then press Refresh."));
   return parts;
 }
 
@@ -156,7 +158,7 @@ function renderMessage(status) {
     body = [usbDebugSteps(), el("p", { class: "row-why" }, "This page finds the tablet by itself. Press Refresh to check now.")];
   }
   // Only redraw when the message changes, so buttons and links stay put.
-  const key = title + (status.installer || "");
+  const key = title + (status.canInstall ? "1" : "");
   if (box.dataset.key === key) return;
   box.dataset.key = key;
   box.replaceChildren(el("h2", {}, title), ...body,

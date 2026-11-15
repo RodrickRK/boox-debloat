@@ -49,26 +49,27 @@ func findAdb() string {
 		return p
 	}
 	home, _ := os.UserHomeDir()
-	var candidates []string
+	// The copy the app downloaded itself comes first.
+	candidates := []string{filepath.Join(platformToolsDir(), adbExe())}
 	switch runtime.GOOS {
 	case "windows":
 		local := os.Getenv("LOCALAPPDATA")
-		candidates = []string{
+		candidates = append(candidates,
 			filepath.Join(home, "scoop", "shims", "adb.exe"),
 			filepath.Join(local, "Android", "Sdk", "platform-tools", "adb.exe"),
 			filepath.Join(local, "Microsoft", "WinGet", "Links", "adb.exe"),
-		}
+		)
 	case "darwin":
-		candidates = []string{
+		candidates = append(candidates,
 			"/opt/homebrew/bin/adb",
 			"/usr/local/bin/adb",
 			filepath.Join(home, "Library", "Android", "sdk", "platform-tools", "adb"),
-		}
+		)
 	default:
-		candidates = []string{
+		candidates = append(candidates,
 			"/usr/bin/adb",
 			filepath.Join(home, "Android", "Sdk", "platform-tools", "adb"),
-		}
+		)
 	}
 	for _, c := range candidates {
 		if st, err := os.Stat(c); err == nil && !st.IsDir() {
@@ -85,46 +86,6 @@ func (a *adbBackend) Available() bool {
 		a.path = findAdb()
 	}
 	return a.path != ""
-}
-
-// adbInstaller returns the package manager that can install adb here
-// ("brew" or "scoop") and the command to run it, or "" if there's none.
-func adbInstaller() (string, []string) {
-	switch runtime.GOOS {
-	case "darwin":
-		for _, p := range []string{"brew", "/opt/homebrew/bin/brew", "/usr/local/bin/brew"} {
-			if path, err := exec.LookPath(p); err == nil {
-				return "brew", []string{path, "install", "--cask", "android-platform-tools"}
-			}
-		}
-	case "windows":
-		home, _ := os.UserHomeDir()
-		if _, err := exec.LookPath("scoop"); err == nil {
-			return "scoop", []string{"powershell", "-NoProfile", "-Command", "scoop install adb"}
-		}
-		if _, err := os.Stat(filepath.Join(home, "scoop", "shims", "scoop.ps1")); err == nil {
-			return "scoop", []string{"powershell", "-NoProfile", "-Command", "scoop install adb"}
-		}
-	}
-	return "", nil
-}
-
-// installAdb runs the package manager. It can take a few minutes.
-func installAdb() (string, error) {
-	name, cmd := adbInstaller()
-	if name == "" {
-		return "", errors.New("no installer found")
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
-	defer cancel()
-	c := exec.CommandContext(ctx, cmd[0], cmd[1:]...)
-	c.Env = append(os.Environ(), "HOMEBREW_NO_AUTO_UPDATE=1")
-	out, err := c.CombinedOutput()
-	text := strings.ReplaceAll(string(out), "\r", "")
-	if ctx.Err() == context.DeadlineExceeded {
-		return text, errors.New("the install took too long")
-	}
-	return text, err
 }
 
 func (a *adbBackend) run(timeout time.Duration, args ...string) (string, error) {
