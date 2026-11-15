@@ -46,6 +46,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/restore-all", s.api(http.MethodPost, s.handleRestoreAll))
 	mux.HandleFunc("/api/reboot", s.api(http.MethodPost, s.handleReboot))
 	mux.HandleFunc("/api/picture", s.api(http.MethodPost, s.handlePicture))
+	mux.HandleFunc("/api/install-adb", s.api(http.MethodPost, s.handleInstallAdb))
 	mux.HandleFunc("/api/ping", s.api(http.MethodPost, func(w http.ResponseWriter, r *http.Request) {
 		s.lastPing.Store(time.Now().Unix())
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
@@ -98,6 +99,7 @@ type statusResp struct {
 	Demo      bool   `json:"demo"`
 	Version   string `json:"version"`
 	OS        string `json:"os"`
+	Installer string `json:"installer,omitempty"` // brew or scoop, when adb is missing
 }
 
 // pickDevice chooses the tablet to work with. Caller must hold s.mu.
@@ -144,6 +146,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	resp := statusResp{Adb: s.be.Available(), Expected: s.cat.Model, Demo: s.demo, Version: s.version, OS: osName()}
 	if !resp.Adb {
 		resp.State = "none"
+		resp.Installer, _ = adbInstaller()
 		writeJSON(w, http.StatusOK, resp)
 		return
 	}
@@ -319,6 +322,40 @@ func (s *Server) handleReboot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// handleInstallAdb installs Android platform tools with Homebrew or Scoop.
+// It only runs when adb is missing and the user pressed the button.
+func (s *Server) handleInstallAdb(w http.ResponseWriter, r *http.Request) {
+	if s.demo {
+		writeErr(w, http.StatusConflict, "Demo mode doesn't install anything.")
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.be.Available() {
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true, "already": true})
+		return
+	}
+	name, _ := adbInstaller()
+	if name == "" {
+		writeErr(w, http.StatusConflict, "No Homebrew or Scoop found. Download Android platform tools from Google instead.")
+		return
+	}
+	out, err := installAdb()
+	if err != nil || !s.be.Available() {
+		tail := out
+		if len(tail) > 600 {
+			tail = "…" + tail[len(tail)-600:]
+		}
+		msg := "The install didn't finish."
+		if err != nil {
+			msg += " " + err.Error() + "."
+		}
+		writeJSON(w, http.StatusBadGateway, map[string]string{"error": msg, "output": strings.TrimSpace(tail)})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "installer": name})
 }
 
 // ---------------------------------------------------------------------------

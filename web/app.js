@@ -71,47 +71,92 @@ function flash() {
 // Connection status
 // ---------------------------------------------------------------------------
 
-const installHelp = {
-  mac: ["Install it with Homebrew:", "brew install --cask android-platform-tools"],
-  windows: ["Install it with Scoop:", "scoop install adb"],
-  linux: ["Install it with your package manager, for example:", "sudo apt install adb"],
+const platformToolsURL = "https://developer.android.com/tools/releases/platform-tools";
+
+const installCommand = {
+  mac: "brew install --cask android-platform-tools",
+  windows: "scoop install adb",
+  linux: "sudo apt install adb",
 };
+
+// The steps to turn on USB debugging on the C69 M Star.
+function usbDebugSteps() {
+  return el("ol", { class: "steps" },
+    el("li", {}, "On the tablet, open ", el("strong", {}, "Apps"), ", tap the menu at the top right, then ", el("strong", {}, "App management"), "."),
+    el("li", {}, "Turn on ", el("strong", {}, "USB Debug Mode"), "."),
+    el("li", {}, "Connect the tablet with a USB cable that carries data."),
+    el("li", {}, "Tap ", el("strong", {}, "Allow"), " when the tablet asks to allow USB debugging, and tick ", el("strong", {}, "Always allow from this computer"), "."));
+}
+
+// Shown when adb is missing: install with one click, or download it.
+function adbInstallBlock(status) {
+  const parts = [el("p", {}, "boox-debloat uses Android platform tools (adb) to talk to the tablet.")];
+  if (status.installer) {
+    const via = status.installer === "brew" ? "Homebrew" : "Scoop";
+    const out = el("p", { class: "install-out", hidden: true });
+    const btn = el("button", { type: "button", class: "button" }, "Install Android platform tools");
+    btn.addEventListener("click", async () => {
+      state.busy = true; // keep the page from redrawing while it installs
+      btn.disabled = true;
+      btn.textContent = "Installing…";
+      out.hidden = false;
+      out.classList.remove("bad");
+      out.textContent = `Installing with ${via}. This can take a few minutes.`;
+      try {
+        await postJSON("install-adb");
+        out.textContent = "Installed. Looking for your tablet…";
+        state.busy = false;
+        await refreshStatus();
+      } catch (err) {
+        out.classList.add("bad");
+        out.textContent = err.message;
+        btn.disabled = false;
+        btn.textContent = "Try again";
+      } finally {
+        state.busy = false;
+      }
+    });
+    parts.push(el("div", { class: "install-row" }, btn, el("span", { class: "row-why" }, `Uses ${via}`)), out);
+  } else {
+    parts.push(el("p", {}, "Install it with this command, then press Refresh:"), el("p", {}, el("code", {}, installCommand[status.os] || installCommand.linux)));
+  }
+  parts.push(el("p", {}, "Or ", el("a", { href: platformToolsURL, target: "_blank", rel: "noopener noreferrer" }, "download Android platform tools from Google"), ", then press Refresh."));
+  return parts;
+}
 
 function renderMessage(status) {
   const box = $("message");
-  box.replaceChildren();
-  let title, lines = [];
+  let title, body = [];
   if (!token) {
     title = "This page needs to be opened from the app.";
-    lines = ["Run boox-debloat again; it opens the right address for you."];
+    body = [el("p", {}, "Run boox-debloat again; it opens the right address for you.")];
   } else if (status.expired) {
     title = "This page has expired.";
-    lines = ["Close it and run boox-debloat again. Each run opens a new address."];
+    body = [el("p", {}, "Close it and run boox-debloat again. Each run opens a new address.")];
   } else if (status.stopped) {
     title = "boox-debloat isn't running.";
-    lines = ["Run boox-debloat again to reopen the app."];
+    body = [el("p", {}, "Run boox-debloat again to reopen the app.")];
   } else if (!status.adb) {
-    const help = installHelp[status.os] || installHelp.linux;
-    title = "adb isn't installed.";
-    lines = ["boox-debloat uses adb to talk to the tablet.", help[0], el("code", {}, help[1]), "Then run boox-debloat again."];
+    title = "Install Android platform tools.";
+    body = adbInstallBlock(status);
   } else if (status.state === "unauthorized") {
     title = "Allow USB debugging on the tablet.";
-    lines = ["A prompt is waiting on the tablet's screen. Tap Allow, and tick Always allow from this computer."];
+    body = [el("p", {}, "A prompt is waiting on the tablet's screen. Unlock it, tap Allow, and tick Always allow from this computer.")];
   } else if (status.state === "multiple") {
     title = "More than one Android device is connected.";
-    lines = ["Unplug the others, or start the app with boox-debloat -serial <serial>."];
+    body = [el("p", {}, "Unplug the others, or start the app with boox-debloat -serial <serial>.")];
   } else if (status.state === "offline") {
     title = "The tablet isn't responding.";
-    lines = ["Unplug it, plug it back in, and unlock the screen."];
+    body = [el("p", {}, "Unplug it, plug it back in, and unlock the screen.")];
   } else {
-    title = "Plug in your tablet.";
-    lines = [
-      "Connect it with a USB cable that carries data.",
-      "On the tablet, turn on USB Debug Mode: Apps, then the menu, then App management.",
-      "This page updates by itself once the tablet is found.",
-    ];
+    title = "Plug in your tablet and turn on USB debugging.";
+    body = [usbDebugSteps(), el("p", { class: "row-why" }, "This page finds the tablet by itself. Press Refresh to check now.")];
   }
-  box.append(el("h2", {}, title), ...lines.map((l) => (l instanceof Node ? el("p", {}, l) : el("p", {}, l))));
+  // Only redraw when the message changes, so buttons and links stay put.
+  const key = title + (status.installer || "");
+  if (box.dataset.key === key) return;
+  box.dataset.key = key;
+  box.replaceChildren(el("h2", {}, title), ...body);
 }
 
 function renderDevice(status) {
@@ -147,7 +192,9 @@ function renderConnection(status, connected) {
   else text = "No tablet connected";
   $("connText").textContent = text;
   $("conn").classList.toggle("on", !!connected);
-  show("refreshBtn", !!connected);
+  // Refresh works whenever the app is running: it re-checks the connection
+  // and, once connected, reloads the app list.
+  show("refreshBtn", !!token && !status.expired && !status.stopped);
 }
 
 // Re-reads the tablet: connection, firmware and every app's state.

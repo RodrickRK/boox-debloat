@@ -288,6 +288,19 @@ p { margin: 0; }
   border-radius: 4px;
 }
 
+.steps {
+  margin: 0;
+  padding-left: 22px;
+  display: grid;
+  gap: 8px;
+}
+
+.message a { color: var(--ink); text-underline-offset: 3px; }
+
+.install-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.install-out { font-size: var(--s-1); }
+.install-out.bad { color: var(--warn); }
+
 .unsupported {
   border: 2px solid var(--warn);
   color: var(--warn);
