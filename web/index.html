@@ -7,7 +7,7 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Literata:opsz,wght@7..72,500;7..72,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Libre+Baskerville&family=Literata:opsz,wght@7..72,500;7..72,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
@@ -26,7 +26,12 @@
 
     <div class="device-info">
       <h1 id="deviceName">Boox Debloat</h1>
-      <p class="device-meta" id="deviceMeta">Looking for your tablet…</p>
+      <p class="device-meta" id="deviceMeta" hidden></p>
+      <div class="conn" id="conn">
+        <span class="conn-dot" aria-hidden="true"></span>
+        <span id="connText" role="status">Looking for your tablet…</span>
+        <button type="button" class="text-button conn-refresh" id="refreshBtn" hidden>Refresh</button>
+      </div>
       <p class="sleep-status" id="sleepStatus" hidden></p>
 
       <form class="picture" id="pictureForm" hidden>
@@ -46,8 +51,15 @@
 
       <div class="restart" id="restartBox" hidden>
         <button type="button" class="outline-button" id="restartBtn">Restart tablet</button>
-        <p class="picture-info">Finishes any app changes.</p>
       </div>
+
+      <footer class="credit">
+        <p>Created by <a class="tekki" href="https://www.tekki.studio" target="_blank" rel="noopener noreferrer">Tekki</a></p>
+        <a class="coffee" href="https://buymeacoffee.com/tekki.studio" target="_blank" rel="noopener noreferrer">
+          <img src="bmc-logo.svg" alt="" width="14" height="20">
+          <span>Buy me a coffee</span>
+        </a>
+      </footer>
     </div>
   </header>
 
@@ -81,18 +93,6 @@
     </div>
 
     <section class="result" id="result" hidden></section>
-
-    <footer class="credit">
-      <p>Created by <a href="https://www.tekki.studio" target="_blank" rel="noopener noreferrer">Tekki</a></p>
-      <a class="coffee" href="https://buymeacoffee.com/tekki.studio" target="_blank" rel="noopener noreferrer">
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-          <path d="M5 8h11v6a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5V8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-          <path d="M16 10h1.5a2.5 2.5 0 0 1 0 5H16" fill="none" stroke="currentColor" stroke-width="1.8"/>
-          <path d="M8 3.5c0 1 1 1 1 2M11.5 3.5c0 1 1 1 1 2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-        <span>Buy me a coffee</span>
-      </a>
-    </footer>
   </main>
 </div>
 

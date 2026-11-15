@@ -116,10 +116,11 @@ function renderMessage(status) {
 
 function renderDevice(status) {
   show("demo", status.demo);
-  const connected = status.adb && status.state === "device";
+  const connected = token && status.adb && status.state === "device";
+  renderConnection(status, connected);
   if (!connected) {
     $("deviceName").textContent = "Boox Debloat";
-    $("deviceMeta").textContent = status.expired || status.stopped ? "Not connected to the app" : "No tablet connected";
+    show("deviceMeta", false);
     show("sleepStatus", false);
     show("pictureForm", false);
     show("restartBox", false);
@@ -128,10 +129,48 @@ function renderDevice(status) {
   show("restartBox", true);
   $("deviceName").textContent = status.model === "C69_M_STAR" ? "C69 M Star" : status.model || "Android device";
   const fw = (status.firmware.match(/(\d+\.\d+\.\d+)/) || [])[1] || status.firmware;
-  const date = (status.firmware.match(/^(\d{4}-\d{2}-\d{2})/) || [])[1];
-  $("deviceMeta").textContent = `Firmware ${fw}${date ? " (" + date + ")" : ""}, Android ${status.android}`;
+  const meta = $("deviceMeta");
+  meta.textContent = `Firmware ${fw}, Android ${status.android}`;
+  meta.title = status.firmware; // full build name on hover
+  show("deviceMeta", true);
   show("pictureForm", status.supported);
 }
+
+// The line under the tablet's name: a dot, what's happening, and Refresh.
+function renderConnection(status, connected) {
+  let text;
+  if (connected) text = "Connected";
+  else if (status.expired || status.stopped) text = "Not connected to the app";
+  else if (status.adb === false) text = "adb isn't installed";
+  else if (status.state === "unauthorized") text = "Waiting for USB permission";
+  else if (status.state === "multiple") text = "More than one device connected";
+  else text = "No tablet connected";
+  $("connText").textContent = text;
+  $("conn").classList.toggle("on", !!connected);
+  show("refreshBtn", !!connected);
+}
+
+// Re-reads the tablet: connection, firmware and every app's state.
+async function refreshAll() {
+  const n = state.pending.size;
+  if (n > 0) {
+    const body = [el("p", {}, `Refreshing reloads the app list from the tablet and drops your ${n} unapplied change${n === 1 ? "" : "s"}.`)];
+    if (!(await confirmDialog("Discard unapplied changes?", body, "Discard and refresh"))) return;
+  }
+  const btn = $("refreshBtn");
+  btn.disabled = true;
+  btn.textContent = "Refreshing…";
+  state.pending.clear();
+  state.apps = null; // makes refreshStatus reload the list
+  try {
+    await refreshStatus();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Refresh";
+  }
+}
+
+$("refreshBtn").addEventListener("click", refreshAll);
 
 async function refreshStatus() {
   if (state.busy) return;
