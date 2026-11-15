@@ -4,6 +4,9 @@
 // computer: the address fragment isn't sent with requests.
 const token = location.hash.slice(1);
 
+// A new address from the app means a new token: start fresh.
+window.addEventListener("hashchange", () => location.reload());
+
 const $ = (id) => document.getElementById(id);
 
 const state = {
@@ -25,7 +28,11 @@ async function api(path, options = {}) {
   });
   let data = {};
   try { data = await res.json(); } catch (_) { /* empty body */ }
-  if (!res.ok) throw new Error(data.error || "Something went wrong (" + res.status + ").");
+  if (!res.ok) {
+    const err = new Error(data.error || "Something went wrong (" + res.status + ").");
+    err.status = res.status;
+    throw err;
+  }
   return data;
 }
 
@@ -77,6 +84,12 @@ function renderMessage(status) {
   if (!token) {
     title = "This page needs to be opened from the app.";
     lines = ["Run boox-debloat again; it opens the right address for you."];
+  } else if (status.expired) {
+    title = "This page has expired.";
+    lines = ["Close it and run boox-debloat again. Each run opens a new address."];
+  } else if (status.stopped) {
+    title = "boox-debloat isn't running.";
+    lines = ["Run boox-debloat again to reopen the app."];
   } else if (!status.adb) {
     const help = installHelp[status.os] || installHelp.linux;
     title = "adb isn't installed.";
@@ -106,11 +119,13 @@ function renderDevice(status) {
   const connected = status.adb && status.state === "device";
   if (!connected) {
     $("deviceName").textContent = "Boox Debloat";
-    $("deviceMeta").textContent = "No tablet connected";
+    $("deviceMeta").textContent = status.expired || status.stopped ? "Not connected to the app" : "No tablet connected";
     show("sleepStatus", false);
     show("pictureForm", false);
+    show("restartBox", false);
     return;
   }
+  show("restartBox", true);
   $("deviceName").textContent = status.model === "C69_M_STAR" ? "C69 M Star" : status.model || "Android device";
   const fw = (status.firmware.match(/(\d+\.\d+\.\d+)/) || [])[1] || status.firmware;
   const date = (status.firmware.match(/^(\d{4}-\d{2}-\d{2})/) || [])[1];
@@ -124,7 +139,13 @@ async function refreshStatus() {
   try {
     status = token ? await api("status") : { adb: true, state: "none" };
   } catch (err) {
-    status = { adb: true, state: "none", error: err.message };
+    status = {
+      adb: true,
+      state: "none",
+      error: err.message,
+      expired: err.status === 401,
+      stopped: err.status === undefined, // the request never reached the app
+    };
   }
   const was = state.status;
   state.status = status;
@@ -304,10 +325,13 @@ const groupTitles = {
   enable: "Turn on",
 };
 
-function confirmDialog(title, body, okText) {
+function confirmDialog(title, body, okText, { cancelText = "Cancel", note = "" } = {}) {
   $("dialogTitle").textContent = title;
   $("dialogBody").replaceChildren(...body);
   $("dialogOk").textContent = okText;
+  $("dialogCancel").textContent = cancelText;
+  $("dialogNote").textContent = note;
+  $("dialogNote").hidden = !note;
   const dialog = $("dialog");
   return new Promise((resolve) => {
     dialog.addEventListener("close", () => resolve(dialog.returnValue === "ok"), { once: true });
@@ -322,31 +346,44 @@ $("review").addEventListener("click", async () => {
     el("div", {},
       el("h3", {}, `${groupTitles[action]} (${ids.length})`),
       el("ul", {}, ids.map((id) => el("li", {}, nameOf(id))))));
-  if (!(await confirmDialog("Review changes", body, "Apply to tablet"))) return;
+  const note = "Your current app list is saved as a backup first.";
+  if (!(await confirmDialog("Review changes", body, "Apply to tablet", { note }))) return;
   const changes = [...state.pending].map(([id, action]) => ({ id, action }));
   await apply(() => postJSON("apply", { changes }));
 });
 
 $("restoreAll").addEventListener("click", async () => {
   const body = [el("p", {}, "Every app this tool can remove comes back, and NFC is turned on again. Anything you changed by hand stays as it is.")];
-  if (!(await confirmDialog("Restore all apps?", body, "Restore all apps"))) return;
+  const note = "Your current app list is saved as a backup first.";
+  if (!(await confirmDialog("Restore all apps?", body, "Restore all apps", { note }))) return;
   await apply(() => postJSON("restore-all"));
 });
 
 async function apply(call) {
   state.busy = true;
   setBusy(true, "Applying…");
+  let changed = false;
   try {
     const res = await call();
     state.pending.clear();
     flash();
     reportResults(res);
+    changed = res.results.some((r) => r.ok);
   } catch (err) {
     showResult([el("p", { class: "bad" }, err.message)]);
   } finally {
     state.busy = false;
     setBusy(false);
     await loadApps();
+  }
+  if (changed) await askToRestart();
+}
+
+// After changes, offer a restart: removed apps only fully go away after one.
+async function askToRestart() {
+  const body = [el("p", {}, "Your changes are applied. They finish taking effect after a restart, which takes about a minute.")];
+  if (await confirmDialog("Restart the tablet now?", body, "Restart now", { cancelText: "Later" })) {
+    await reboot();
   }
 }
 
@@ -370,9 +407,6 @@ function reportResults(res) {
     parts.push(el("ul", {}, failed.map((r) => el("li", { class: "bad" }, `${nameOf(r.id)}: ${r.message || "no answer from the tablet"}`))));
   }
   if (res.backup) parts.push(el("p", { class: "row-why" }, "Backup: ", res.backup));
-  if (res.results.length) {
-    parts.push(el("button", { type: "button", class: "button", onclick: reboot }, "Restart tablet"));
-  }
   showResult(parts);
 }
 
@@ -384,13 +418,22 @@ function showResult(parts) {
 }
 
 async function reboot() {
+  $("restartBtn").disabled = true;
   try {
     await postJSON("reboot");
     showResult([el("p", {}, "Restarting. The tablet reconnects here when it's back on.")]);
   } catch (err) {
     showResult([el("p", { class: "bad" }, err.message)]);
+  } finally {
+    // Leave the button off for a while; the tablet takes about a minute.
+    setTimeout(() => { $("restartBtn").disabled = false; }, 30000);
   }
 }
+
+$("restartBtn").addEventListener("click", async () => {
+  const body = [el("p", {}, "The tablet turns off and on again, which takes about a minute. This page reconnects by itself.")];
+  if (await confirmDialog("Restart the tablet?", body, "Restart tablet")) await reboot();
+});
 
 // ---------------------------------------------------------------------------
 // Sleep picture

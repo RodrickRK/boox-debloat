@@ -1,3 +1,5 @@
+<img src="web/icon.svg" width="72" alt="">
+
 # Boox Debloat
 
 A small app for the **Onyx Boox C69 M Star** (Star Education edition). It removes the extra system apps, lets you bring any of them back with one switch, and keeps the sleep screen working.
@@ -36,7 +38,7 @@ Both install adb for you.
 3. Run `boox-debloat`. Your browser opens the app.
 4. Tap **Allow** on the tablet's USB debugging prompt the first time.
 5. Switch off the apps you want removed, then **Review changes** and **Apply to tablet**.
-6. Restart the tablet when it asks.
+6. Restart the tablet when it asks, or any time with **Restart tablet** in the left panel.
 
 To undo, switch an app back on, or use **Restore all apps**. A backup of your app list is saved before every change:
 
@@ -75,3 +77,5 @@ Releases are built with [GoReleaser](https://goreleaser.com) when a `v*` tag is 
 ## Licence
 
 MIT. Not affiliated with Onyx. Use at your own risk.
+
+Created by [Tekki](https://www.tekki.studio). If it saved you some time, you can [buy me a coffee](https://buymeacoffee.com/tekki.studio).

@@ -19,6 +19,9 @@
 
 * { box-sizing: border-box; }
 
+/* Elements with a display rule must still hide when [hidden] is set. */
+[hidden] { display: none !important; }
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {
@@ -28,10 +31,26 @@ body {
   font: 400 var(--s0)/1.5 var(--sans);
 }
 
+/* Three columns: tablet panel (sticky) | safe to remove | kept and turned off */
 .page {
-  max-width: 680px;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 40px 16px 140px;
+  padding: 32px 24px 140px;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  column-gap: 48px;
+  align-items: start;
+}
+
+.page > .demo { grid-column: 1 / -1; }
+
+main { min-width: 0; }
+
+#lists:not([hidden]) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 40px;
+  align-items: start;
 }
 
 h1, h2 {
@@ -59,13 +78,21 @@ p { margin: 0; }
 }
 
 /* ---------- Device header ---------- */
+/* The tablet panel stays in view while the app lists scroll. */
 .device {
+  position: sticky;
+  top: 24px;
   display: grid;
-  grid-template-columns: 196px 1fr;
-  gap: 32px;
-  align-items: start;
-  margin-bottom: 48px;
+  gap: 18px;
+  align-content: start;
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+  padding-bottom: 8px;
 }
+
+.device .tablet { width: 150px; }
+.device .tablet { padding: 9px 9px 28px; }
+.device .back-button { bottom: 10px; }
 
 /* A drawing of the C69: thin bezel, wider chin with the Back button. */
 .tablet {
@@ -122,14 +149,14 @@ p { margin: 0; }
   color: var(--muted);
 }
 
-.sleep-status { margin-top: 14px; }
+.sleep-status { margin-top: 10px; }
 .sleep-status.bad { color: var(--warn); }
 
 /* ---------- Sleep picture form ---------- */
 .picture {
-  margin-top: 28px;
+  margin-top: 20px;
   display: grid;
-  gap: 12px;
+  gap: 10px;
   justify-items: start;
 }
 
@@ -182,6 +209,27 @@ p { margin: 0; }
   color: var(--muted);
   border-color: var(--rule);
   cursor: default;
+}
+
+.outline-button {
+  font: 400 var(--s0)/1 var(--sans);
+  color: var(--ink);
+  background: var(--paper-light);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 9px 14px;
+  cursor: pointer;
+}
+
+.outline-button:disabled { color: var(--muted); border-color: var(--rule); cursor: default; }
+
+.restart {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+  display: grid;
+  gap: 8px;
+  justify-items: start;
 }
 
 .text-button {
@@ -321,6 +369,35 @@ p { margin: 0; }
 .result ul { margin: 0; padding-left: 20px; }
 .result .bad { color: var(--warn); }
 
+/* ---------- Credit ---------- */
+.credit {
+  margin-top: 56px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  font-size: var(--s-1);
+  color: var(--muted);
+}
+
+.credit a { color: var(--ink); text-underline-offset: 3px; }
+
+.coffee {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 6px 12px;
+  text-decoration: none;
+  background: var(--paper-light);
+}
+
+.coffee:hover span { text-decoration: underline; text-underline-offset: 3px; }
+
 /* ---------- Bottom bar ---------- */
 .bar {
   position: fixed;
@@ -332,9 +409,9 @@ p { margin: 0; }
 }
 
 .bar-inner {
-  max-width: 680px;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 12px 16px;
+  padding: 12px 24px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -381,11 +458,26 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
   .switch::after { transition: none; }
 }
 
-/* ---------- Narrow screens ---------- */
-@media (max-width: 560px) {
-  .page { padding-top: 24px; }
-  .device { grid-template-columns: 1fr; gap: 24px; }
-  .tablet { width: 160px; }
+/* ---------- Narrower screens ---------- */
+
+/* Two columns: tablet panel | one list column */
+@media (max-width: 1100px) {
+  #lists:not([hidden]) { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* One column: everything stacks and nothing is sticky */
+@media (max-width: 760px) {
+  .page {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 24px 16px 140px;
+  }
+  .device {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    margin-bottom: 40px;
+  }
+  .device .tablet { width: 160px; }
   h1 { font-size: 28px; }
-  .bar-inner { flex-wrap: wrap; gap: 8px 16px; }
+  .bar-inner { flex-wrap: wrap; gap: 8px 16px; padding: 12px 16px; }
 }
