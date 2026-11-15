@@ -1,0 +1,391 @@
+/* Boox Debloat: greyscale, like the tablet's e-ink screen. */
+:root {
+  --paper: #E6E6E3;
+  --paper-light: #F2F2EF;
+  --ink: #000000;
+  --muted: #5C5C58;
+  --rule: #C4C4BF;
+  --locked: #D8D8D4;
+  --warn: #A4241B;
+
+  --serif: "Literata", Georgia, "Times New Roman", serif;
+  --sans: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --s-1: 14px;
+  --s0: 17px;
+  --s1: 21px;
+  --s2: 34px;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 var(--s0)/1.5 var(--sans);
+}
+
+.page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 40px 16px 140px;
+}
+
+h1, h2 {
+  font-family: var(--serif);
+  font-weight: 600;
+  margin: 0;
+}
+
+h1 { font-size: var(--s2); line-height: 1.1; }
+h2 { font-size: var(--s1); line-height: 1.25; }
+
+p { margin: 0; }
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* ---------- Demo note ---------- */
+.demo {
+  border: 2px solid var(--ink);
+  padding: 8px 12px;
+  margin-bottom: 28px;
+  font-size: var(--s-1);
+}
+
+/* ---------- Device header ---------- */
+.device {
+  display: grid;
+  grid-template-columns: 196px 1fr;
+  gap: 32px;
+  align-items: start;
+  margin-bottom: 48px;
+}
+
+/* A drawing of the C69: thin bezel, wider chin with the Back button. */
+.tablet {
+  position: relative;
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  padding: 12px 12px 34px;
+  background: var(--paper-light);
+}
+
+.screen {
+  position: relative;
+  aspect-ratio: 758 / 1024;
+  background: var(--paper);
+  border: 1px solid var(--muted);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.screen img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: grayscale(1);
+  background: #fff;
+}
+
+.screen-hint {
+  padding: 12px;
+  text-align: center;
+  font-size: var(--s-1);
+  color: var(--muted);
+}
+
+.tablet.dragging .screen { outline: 2px dashed var(--ink); outline-offset: -6px; }
+
+.back-button {
+  position: absolute;
+  left: 50%;
+  bottom: 13px;
+  width: 26px;
+  height: 7px;
+  transform: translateX(-50%);
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+}
+
+.device-info { padding-top: 4px; }
+
+.device-meta {
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+.sleep-status { margin-top: 14px; }
+.sleep-status.bad { color: var(--warn); }
+
+/* ---------- Sleep picture form ---------- */
+.picture {
+  margin-top: 28px;
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.picture-title { font-weight: 700; }
+
+.file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.file-button span {
+  display: inline-block;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 7px 14px;
+  cursor: pointer;
+  background: var(--paper-light);
+}
+
+.file-button input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.check input { width: 18px; height: 18px; accent-color: var(--ink); margin: 0; }
+
+.picture-info { font-size: var(--s-1); color: var(--muted); max-width: 46ch; }
+.picture-info.bad { color: var(--warn); }
+.picture-done { font-size: var(--s-1); max-width: 46ch; }
+
+/* ---------- Buttons ---------- */
+.button {
+  font: 700 var(--s0)/1 var(--sans);
+  color: var(--paper-light);
+  background: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 11px 18px;
+  cursor: pointer;
+}
+
+.button:disabled {
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--rule);
+  cursor: default;
+}
+
+.text-button {
+  font: 400 var(--s0)/1 var(--sans);
+  color: var(--ink);
+  background: none;
+  border: 0;
+  padding: 8px 2px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.text-button:disabled { color: var(--muted); cursor: default; }
+
+/* ---------- Messages (not connected, adb missing) ---------- */
+.message {
+  border-top: 2px solid var(--ink);
+  padding-top: 20px;
+  display: grid;
+  gap: 12px;
+  max-width: 60ch;
+}
+
+.message code, .result code {
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 15px;
+  background: var(--paper-light);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.unsupported {
+  border: 2px solid var(--warn);
+  color: var(--warn);
+  padding: 10px 14px;
+  margin-bottom: 32px;
+}
+
+/* ---------- App lists ---------- */
+.group { margin-bottom: 44px; }
+
+.group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 8px;
+}
+
+.group-note {
+  color: var(--muted);
+  font-size: var(--s-1);
+  margin-top: 10px;
+}
+
+.rows {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 16px;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.row-text > span { display: block; }
+.row-name { font-weight: 700; }
+.row-why, .row-id { font-size: var(--s-1); color: var(--muted); }
+.row-id { overflow-wrap: anywhere; }
+
+.row-pending {
+  font-size: var(--s-1);
+  font-style: italic;
+}
+
+.row.locked { color: var(--muted); }
+.row.locked .row-name { color: var(--ink); }
+
+.row.missing .row-name { color: var(--muted); }
+
+.lock {
+  font-size: var(--s-1);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.row.problem .row-why { color: var(--warn); }
+
+/* Switch: filled ink when the app is installed. */
+.switch {
+  position: relative;
+  width: 50px;
+  height: 28px;
+  border-radius: 14px;
+  border: 2px solid var(--ink);
+  background: var(--paper-light);
+  cursor: pointer;
+  padding: 0;
+  flex: none;
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--ink);
+  transition: transform 120ms ease-out;
+}
+
+.switch[aria-checked="true"] { background: var(--ink); }
+.switch[aria-checked="true"]::after { background: var(--paper-light); transform: translateX(22px); }
+.switch:disabled { border-color: var(--rule); cursor: default; }
+.switch:disabled::after { background: var(--rule); }
+
+/* ---------- Result after applying ---------- */
+.result {
+  border: 2px solid var(--ink);
+  background: var(--paper-light);
+  padding: 18px 20px;
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  margin-top: 8px;
+}
+
+.result ul { margin: 0; padding-left: 20px; }
+.result .bad { color: var(--warn); }
+
+/* ---------- Bottom bar ---------- */
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--paper);
+  border-top: 2px solid var(--ink);
+}
+
+.bar-inner {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.bar-space { flex: 1; }
+
+/* ---------- Review dialog ---------- */
+dialog {
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: var(--paper-light);
+  color: var(--ink);
+  padding: 0;
+  width: min(520px, calc(100vw - 32px));
+}
+
+dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
+
+.dialog { padding: 24px; display: grid; gap: 16px; }
+.dialog h3 { font: 700 var(--s0)/1.3 var(--sans); margin: 0 0 6px; }
+.dialog ul { margin: 0; padding-left: 20px; max-height: 40vh; overflow: auto; }
+.dialog-note { font-size: var(--s-1); color: var(--muted); }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 16px; align-items: center; }
+
+/* ---------- The one flourish: an e-ink style full refresh ---------- */
+.flash::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  animation: eink-refresh 420ms steps(1, end);
+  z-index: 10;
+}
+
+@keyframes eink-refresh {
+  0%   { background: #000; }
+  35%  { background: #fff; }
+  70%  { background: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash::after { animation: none; }
+  .switch::after { transition: none; }
+}
+
+/* ---------- Narrow screens ---------- */
+@media (max-width: 560px) {
+  .page { padding-top: 24px; }
+  .device { grid-template-columns: 1fr; gap: 24px; }
+  .tablet { width: 160px; }
+  h1 { font-size: 28px; }
+  .bar-inner { flex-wrap: wrap; gap: 8px 16px; }
+}

@@ -1,0 +1,5 @@
+dist/
+/boox-debloat
+/boox-debloat.exe
+.DS_Store
+.claude/

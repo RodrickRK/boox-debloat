@@ -1,0 +1,40 @@
+{
+  "model": "C69_M_STAR",
+  "remove": [
+    { "id": "com.android.bips", "name": "Built-in print service", "why": "Printing isn't used on this tablet" },
+    { "id": "com.android.calllogbackup", "name": "Call log backup", "why": "The tablet has no phone calls" },
+    { "id": "com.android.cellbroadcastreceiver", "name": "Emergency alerts", "why": "Needs a SIM card, which this tablet doesn't have" },
+    { "id": "com.android.cellbroadcastreceiver.module", "name": "Emergency alerts module", "why": "Needs a SIM card, which this tablet doesn't have" },
+    { "id": "com.android.cellbroadcastservice", "name": "Emergency alert service", "why": "Needs a SIM card, which this tablet doesn't have" },
+    { "id": "com.android.cts.ctsshim", "name": "Android test component", "why": "Only used for Google's compatibility tests" },
+    { "id": "com.android.cts.priv.ctsshim", "name": "Android test component (system)", "why": "Only used for Google's compatibility tests" },
+    { "id": "com.android.egg", "name": "Android Easter egg", "why": "A hidden mini game in Settings" },
+    { "id": "com.android.printservice.recommendation", "name": "Print service suggestions", "why": "Printing isn't used on this tablet" },
+    { "id": "com.android.smspush", "name": "SMS push messages", "why": "The tablet has no text messages" },
+    { "id": "com.bia.tt", "name": "Pre-installed school app", "why": "Part of the education build, not needed at home" },
+    { "id": "com.onyx.android.production.test", "name": "Onyx production test", "why": "Only used in the factory" },
+    { "id": "com.onyx.factorytest", "name": "Onyx factory test", "why": "Only used in the factory" },
+    { "id": "com.onyx.mail", "name": "Onyx Mail", "why": "Email app; other apps do this better" },
+    { "id": "com.qualcomm.embms", "name": "Mobile broadcast (Qualcomm)", "why": "Needs a mobile network" },
+    { "id": "com.qualcomm.qti.dynamicddsservice", "name": "Dual-SIM data (Qualcomm)", "why": "Needs a SIM card" },
+    { "id": "com.qualcomm.qti.sva", "name": "Voice wake-up (Qualcomm)", "why": "Voice activation isn't used" },
+    { "id": "com.qualcomm.qti.uimGbaApp", "name": "SIM authentication (Qualcomm)", "why": "Needs a SIM card" },
+    { "id": "com.qualcomm.qti.xrvd.service", "name": "XR video service (Qualcomm)", "why": "For VR headsets, not e-ink tablets" },
+    { "id": "vendor.qti.iwlan", "name": "Wi-Fi calling (Qualcomm)", "why": "Needs a mobile network" }
+  ],
+  "disable": [
+    { "id": "com.android.nfc", "name": "NFC", "why": "Not used on this tablet; turned off rather than removed" }
+  ],
+  "protected": [
+    { "id": "com.onyx", "name": "Boox launcher and file browser", "why": "Sets the sleep picture and runs the home screen" },
+    { "id": "com.onyx.android.ksync", "name": "Onyx sync (ksync)", "why": "Without it, setting the sleep picture hangs or fails" },
+    { "id": "com.onyx.screenmanager", "name": "Onyx screen manager", "why": "Handles the sleep and power-off screens" },
+    { "id": "com.simplemobiletools.gallery", "name": "Boox Gallery", "why": "Opens pictures for the file browser" },
+    { "id": "com.android.providers.media", "name": "Media index", "why": "The sleep screen only sees indexed pictures" },
+    { "id": "com.android.providers.media.module", "name": "Media index module", "why": "The sleep screen only sees indexed pictures" },
+    { "id": "com.onyx.android.onyxotaservice", "name": "Onyx updates", "why": "Gets firmware updates from Onyx" },
+    { "id": "com.android.vending", "name": "Google Play Store", "why": "Installs and checks apps" },
+    { "id": "com.google.android.gms", "name": "Google Play services", "why": "Many apps need it to run" },
+    { "id": "com.google.android.gsf", "name": "Google Services Framework", "why": "Holds the ID used for Google certification" }
+  ]
+}
