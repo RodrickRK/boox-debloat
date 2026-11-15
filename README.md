@@ -4,6 +4,8 @@
 
 A small app for the **Onyx Boox C69 M Star** (Star Education edition). It removes the extra system apps, lets you bring any of them back with one switch, and keeps the sleep screen working.
 
+It also installs apps from APK files, suggests e-ink friendly apps, and lets you browse, copy and delete files on the tablet.
+
 It runs on your computer, opens in your browser, and talks to the tablet over USB.
 
 ## What it changes
@@ -80,6 +82,18 @@ Backups are saved here:
 
 - Mac: `~/Library/Application Support/boox-debloat/backups`
 - Windows: `%AppData%\boox-debloat\backups`
+
+### Install apps
+
+1. Choose **Apps** in the left panel.
+2. Under **Recommended for e-ink**, open an app's official page (F-Droid or GitHub releases) and download its `.apk`.
+3. Drop it onto **Install an app**. It installs, or updates the app if it's already there.
+
+**Your apps** lists the apps you installed, each with **Uninstall**. The recommended list includes KOReader, Librera, Mihon, EinkBro, inkOS, Key Mapper, AnkiDroid, Kiwix, Material Files, LocalSend, Syncthing-Fork, F-Droid, Aurora Store and Obtainium. It links only to official sources, never to APK mirror sites.
+
+### Files
+
+Choose **Files** to browse the tablet's storage. Open folders, **Upload files** (or drop them on the list), **Download** to your computer, and **Delete** files or empty folders. The Android folder, where apps keep their data, can't be changed.
 
 ### Sleep picture
 

@@ -20,6 +20,8 @@
     <nav class="help-toc" aria-label="On this page">
       <a href="#connect">Connect the tablet</a>
       <a href="#use">Use the app</a>
+      <a href="#apps">Install apps</a>
+      <a href="#files">Files</a>
       <a href="#sleep">Sleep picture</a>
       <a href="#play">Google Play</a>
       <a href="#faq">Questions</a>
@@ -47,6 +49,30 @@
       <li><strong>Restart the tablet</strong> when it asks, or any time with <strong>Restart tablet</strong>.</li>
     </ol>
     <p>To bring an app back, switch it on again and apply, or use <strong>Restore all apps</strong>.</p>
+  </section>
+
+  <section id="apps">
+    <h2>Install apps</h2>
+    <p>Choose <strong>Apps</strong> in the left panel.</p>
+    <ol class="steps">
+      <li>Under <strong>Recommended for e-ink</strong>, open an app's official page: F-Droid or the developer's GitHub releases.</li>
+      <li>Download the <code>.apk</code> file. When a page offers several, pick the one for your tablet's processor (shown on the Apps page) or the universal one.</li>
+      <li>Drop the APK onto <strong>Install an app</strong>, or choose it. The app installs, or updates if it's already there.</li>
+    </ol>
+    <p><strong>Your apps</strong> lists the apps you installed, with an <strong>Uninstall</strong> button for each. System apps aren't listed there; Debloat handles those.</p>
+    <p>Only <code>.apk</code> files work. Split bundles (<code>.apks</code>, <code>.xapk</code>) don't. The recommended list links only to official sources, not to APK mirror sites, which can carry modified apps.</p>
+  </section>
+
+  <section id="files">
+    <h2>Files</h2>
+    <p>Choose <strong>Files</strong> in the left panel to browse the tablet's storage.</p>
+    <ul class="steps">
+      <li>Open a folder by its name. The path at the top takes you back.</li>
+      <li><strong>Upload files</strong>, or drop files on the list, to copy them into the folder you're in. Books go in <strong>Books</strong>.</li>
+      <li><strong>Download</strong> copies a file to your computer's downloads.</li>
+      <li><strong>Delete</strong> removes a file, or a folder once it's empty. It asks first, and it can't be undone.</li>
+    </ul>
+    <p>Only the tablet's shared storage is shown. The Android folder can be browsed but not changed, because apps keep their data there.</p>
   </section>
 
   <section id="sleep">
@@ -122,6 +148,11 @@
     <details>
       <summary>An app from Play Store closes straight away</summary>
       <p>Some apps run Google's licence check, which can fail on uncertified firmware. Install the app from Aurora Store or the developer's own site instead.</p>
+    </details>
+
+    <details>
+      <summary>An APK won't install</summary>
+      <p>The app explains why. The usual causes: a version from a different developer is already installed (uninstall it first), the app needs a newer Android than 11, or the APK is for a different processor.</p>
     </details>
 
     <details>

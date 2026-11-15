@@ -67,7 +67,8 @@ type loggedBackend struct {
 func (b loggedBackend) Shell(serial string, args ...string) (string, error) {
 	out, err := b.Backend.Shell(serial, args...)
 	cmd := strings.Join(args, " ")
-	if strings.HasPrefix(cmd, "getprop ") || strings.HasPrefix(cmd, "pm list packages") {
+	if strings.HasPrefix(cmd, "getprop ") || strings.HasPrefix(cmd, "pm list packages") ||
+		strings.HasPrefix(cmd, "ls -la ") || cmd == userAppsCmd {
 		if err != nil {
 			b.log.add("adb shell %s: error: %v", cmd, err)
 		}
@@ -89,6 +90,26 @@ func (b loggedBackend) Push(serial, local, remote string) error {
 		b.log.add("adb push -> %s: ok", remote)
 	}
 	return err
+}
+
+func (b loggedBackend) Pull(serial, remote, local string) error {
+	err := b.Backend.Pull(serial, remote, local)
+	if err != nil {
+		b.log.add("adb pull %s: error: %s", remote, oneLine(err.Error(), 200))
+	} else {
+		b.log.add("adb pull %s: ok", remote)
+	}
+	return err
+}
+
+func (b loggedBackend) Install(serial, apk string) (string, error) {
+	out, err := b.Backend.Install(serial, apk)
+	answer := oneLine(out, 200)
+	if err != nil {
+		answer = strings.TrimSpace(answer + " (error: " + err.Error() + ")")
+	}
+	b.log.add("adb install -> %s", answer)
+	return out, err
 }
 
 func (b loggedBackend) Reboot(serial string) error {

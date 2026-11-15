@@ -1,0 +1,46 @@
+[
+  {
+    "group": "Reading",
+    "apps": [
+      { "name": "KOReader", "ids": ["org.koreader.launcher.fdroid", "org.koreader.launcher"], "why": "Fast, full-featured reader made for e-ink. EPUB, PDF, DjVu and more.", "source": "F-Droid", "url": "https://f-droid.org/packages/org.koreader.launcher.fdroid/" },
+      { "name": "Librera Reader", "ids": ["com.foobnix.pro.pdf.reader", "com.foobnix.pdf.reader"], "why": "Simple reader with a library view and an e-ink mode.", "source": "F-Droid", "url": "https://f-droid.org/packages/com.foobnix.pro.pdf.reader/" }
+    ]
+  },
+  {
+    "group": "Manga",
+    "apps": [
+      { "name": "Mihon", "ids": ["app.mihon"], "why": "Manga reader with downloads for offline reading. Not on F-Droid.", "source": "GitHub", "url": "https://github.com/mihonapp/mihon/releases/latest" }
+    ]
+  },
+  {
+    "group": "Web and home screen",
+    "apps": [
+      { "name": "EinkBro", "ids": ["info.plateaukao.einkbro", "info.plateaukao.einkbro.g"], "why": "Web browser built for e-ink: page-turn scrolling and no animations.", "source": "F-Droid", "url": "https://f-droid.org/packages/info.plateaukao.einkbro/" },
+      { "name": "inkOS", "ids": ["app.inkos"], "why": "Text-only home screen that is light and easy to read on e-ink.", "source": "GitHub", "url": "https://github.com/gezimos/inkOS/releases/latest" },
+      { "name": "Key Mapper", "ids": ["io.github.sds100.keymapper"], "why": "Give the Back and volume buttons new actions, like turning pages.", "source": "F-Droid", "url": "https://f-droid.org/packages/io.github.sds100.keymapper/" }
+    ]
+  },
+  {
+    "group": "Study",
+    "apps": [
+      { "name": "AnkiDroid", "ids": ["com.ichi2.anki"], "why": "Flashcards with spaced repetition. Works with Anki on the computer.", "source": "F-Droid", "url": "https://f-droid.org/packages/com.ichi2.anki/" },
+      { "name": "Kiwix", "ids": ["org.kiwix.kiwixmobile", "org.kiwix.kiwixmobile.standalone"], "why": "Wikipedia and other reference sites, offline. Not on F-Droid.", "source": "GitHub", "url": "https://github.com/kiwix/kiwix-android/releases/latest" }
+    ]
+  },
+  {
+    "group": "Files and sync",
+    "apps": [
+      { "name": "Material Files", "ids": ["me.zhanghai.android.files"], "why": "Clean file manager with no ads.", "source": "F-Droid", "url": "https://f-droid.org/packages/me.zhanghai.android.files/" },
+      { "name": "LocalSend", "ids": ["org.localsend.localsend_app"], "why": "Send books and files between the tablet and your phone or computer over Wi-Fi.", "source": "F-Droid", "url": "https://f-droid.org/packages/org.localsend.localsend_app/" },
+      { "name": "Syncthing-Fork", "ids": ["com.github.catfriend1.syncthingfork", "com.github.catfriend1.syncthingandroid"], "why": "Keeps a books folder in sync with your computer over Wi-Fi.", "source": "GitHub", "url": "https://github.com/researchxxl/syncthing-android/releases/latest" }
+    ]
+  },
+  {
+    "group": "App stores",
+    "apps": [
+      { "name": "F-Droid", "ids": ["org.fdroid.fdroid"], "why": "Store for free, open-source apps, with updates.", "source": "f-droid.org", "url": "https://f-droid.org/" },
+      { "name": "Aurora Store", "ids": ["com.aurora.store"], "why": "Install Play Store apps without the Play Store.", "source": "F-Droid", "url": "https://f-droid.org/packages/com.aurora.store/" },
+      { "name": "Obtainium", "ids": ["dev.imranr.obtainium.fdroid", "dev.imranr.obtainium"], "why": "Updates apps straight from their GitHub releases, like Mihon and inkOS.", "source": "F-Droid", "url": "https://f-droid.org/packages/dev.imranr.obtainium.fdroid/" }
+    ]
+  }
+]

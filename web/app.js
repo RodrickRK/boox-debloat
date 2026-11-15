@@ -15,6 +15,9 @@ const state = {
   pending: new Map(), // id -> action
   busy: false,
   picture: null,   // File
+  view: "debloat", // debloat | apps | files
+  path: "/sdcard", // folder shown under Files
+  userApps: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -170,9 +173,11 @@ function renderDevice(status) {
     show("sleepStatus", false);
     show("pictureForm", false);
     show("restartBox", false);
+    show("views", false);
     return;
   }
   show("restartBox", true);
+  show("views", true);
   $("deviceName").textContent = status.model === "C69_M_STAR" ? "C69 M Star" : status.model || "Android device";
   const fw = (status.firmware.match(/(\d+\.\d+\.\d+)/) || [])[1] || status.firmware;
   const meta = $("deviceMeta");
@@ -240,8 +245,7 @@ async function refreshStatus() {
 
   const connected = token && status.adb && status.state === "device";
   show("message", !connected);
-  show("lists", connected);
-  show("bar", connected);
+  showView(connected);
   if (!connected) {
     renderMessage(status);
     state.apps = null;
@@ -254,10 +258,311 @@ async function refreshStatus() {
     $("unsupported").textContent =
       `This tool is made for the C69 M Star. This device reports "${status.model}", so changes are turned off.`;
   }
-  if (!was || was.state !== "device" || was.serial !== status.serial || !state.apps) {
-    await loadApps();
+  const fresh = !was || was.state !== "device" || was.serial !== status.serial;
+  if (fresh || !state.apps) await loadApps();
+  if (fresh) loadView();
+}
+
+// ---------------------------------------------------------------------------
+// Sections: Debloat, Apps, Files
+// ---------------------------------------------------------------------------
+
+function showView(connected) {
+  show("lists", connected && state.view === "debloat");
+  show("bar", connected && state.view === "debloat");
+  show("appsView", connected && state.view === "apps");
+  show("filesView", connected && state.view === "files");
+  for (const b of document.querySelectorAll(".view-link")) {
+    if (b.dataset.view === state.view) b.setAttribute("aria-current", "page");
+    else b.removeAttribute("aria-current");
   }
 }
+
+function loadView() {
+  if (state.view === "apps") loadUserApps();
+  if (state.view === "files") loadFiles(state.path);
+}
+
+for (const b of document.querySelectorAll(".view-link")) {
+  b.addEventListener("click", () => {
+    if (state.view === b.dataset.view) return;
+    state.view = b.dataset.view;
+    show("result", false);
+    const s = state.status;
+    showView(!!(token && s && s.adb && s.state === "device"));
+    loadView();
+    window.scrollTo({ top: 0 });
+  });
+}
+
+const supportedNow = () => !!(state.status && state.status.supported);
+
+function setStatus(id, text, kind) {
+  const p = $(id);
+  p.textContent = text || "";
+  p.hidden = !text;
+  p.classList.toggle("bad", kind === "bad");
+  p.classList.toggle("good", kind === "good");
+}
+
+function formatSize(n) {
+  if (n < 1000) return n + " B";
+  if (n < 1e6) return (n / 1e3).toFixed(0) + " KB";
+  if (n < 1e9) return (n / 1e6).toFixed(1) + " MB";
+  return (n / 1e9).toFixed(2) + " GB";
+}
+
+// Uploads with progress. Resolves with the JSON answer or throws its error.
+function upload(path, form, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/" + path);
+    xhr.setRequestHeader("X-Token", token);
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
+    xhr.onload = () => {
+      let data = {};
+      try { data = JSON.parse(xhr.responseText); } catch (_) { /* empty */ }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+      else reject(new Error(data.error || "Something went wrong (" + xhr.status + ")."));
+    };
+    xhr.onerror = () => reject(new Error("The app isn't running."));
+    xhr.send(form);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Apps: install, your apps, recommended
+// ---------------------------------------------------------------------------
+
+async function loadUserApps() {
+  try {
+    state.userApps = await api("user-apps");
+  } catch (err) {
+    setStatus("apkStatus", err.message, "bad");
+    return;
+  }
+  renderUserApps();
+}
+
+function renderUserApps() {
+  const data = state.userApps;
+  if (!data) return;
+  const list = data.apps || [];
+  $("userAppsCount").textContent = list.length ? `${list.length} installed` : "";
+  $("userAppsList").replaceChildren(...(list.length ? list.map(userAppRow) : [el("li", { class: "row" }, el("span", { class: "row-why" }, "No apps installed yet."))]));
+
+  const abi = data.abi ? ` This tablet uses ${data.abi}: pick that APK or the universal one when a page offers several.` : "";
+  $("recNote").textContent = "Lightweight apps that work well on this tablet. Download the APK from the official page, then drop it under Install an app." + abi;
+  $("recList").replaceChildren(...(data.recommended || []).map((g) =>
+    el("div", { class: "rec-group" },
+      el("h3", {}, g.group),
+      el("ul", { class: "rows" }, g.apps.map(recRow)))));
+}
+
+function userAppRow(app) {
+  const text = el("div", { class: "row-text" },
+    el("span", { class: "row-name" }, app.name || app.id),
+    el("span", { class: "row-why" }, app.version ? "Version " + app.version : "Version unknown"),
+    app.name ? el("span", { class: "row-id" }, app.id) : null);
+  const btn = el("button", { type: "button", class: "text-button danger", disabled: !supportedNow(), onclick: () => uninstall(app) }, "Uninstall");
+  return el("li", { class: "row" }, text, el("div", { class: "row-actions" }, btn));
+}
+
+function recRow(app) {
+  const text = el("div", { class: "row-text" },
+    el("span", { class: "row-name" }, app.name),
+    el("span", { class: "row-why" }, app.why));
+  const actions = el("div", { class: "rec-actions" },
+    app.installed ? el("span", { class: "tag-installed" }, "Installed") : null,
+    el("a", { href: app.url, target: "_blank", rel: "noopener noreferrer" }, app.source === "GitHub" ? "GitHub releases" : app.source === "F-Droid" ? "Get on F-Droid" : app.source));
+  return el("li", { class: "row" }, text, actions);
+}
+
+async function uninstall(app) {
+  const name = app.name || app.id;
+  const body = [el("p", {}, `${name} and its data are removed from the tablet. You can install it again later from its APK.`)];
+  if (!(await confirmDialog(`Uninstall ${name}?`, body, "Uninstall"))) return;
+  state.busy = true;
+  try {
+    await postJSON("uninstall", { id: app.id });
+    flash();
+    setStatus("apkStatus", `Uninstalled ${name}.`, "good");
+  } catch (err) {
+    setStatus("apkStatus", err.message, "bad");
+  } finally {
+    state.busy = false;
+    await loadUserApps();
+  }
+}
+
+async function installAPK(file) {
+  if (!file) return;
+  if (!/\.apk$/i.test(file.name)) {
+    setStatus("apkStatus", "Choose an .apk file. Split bundles (.apks, .xapk) aren't supported.", "bad");
+    return;
+  }
+  if (!supportedNow()) return;
+  const drop = $("apkDrop");
+  drop.classList.add("busy");
+  state.busy = true;
+  setStatus("apkStatus", `Sending ${file.name}…`);
+  const form = new FormData();
+  form.append("apk", file);
+  try {
+    await upload("install", form, (f) => {
+      setStatus("apkStatus", f < 1 ? `Sending ${file.name}… ${Math.round(f * 100)}%` : `Installing ${file.name}…`);
+    });
+    flash();
+    setStatus("apkStatus", `Installed ${file.name}.`, "good");
+  } catch (err) {
+    setStatus("apkStatus", err.message, "bad");
+  } finally {
+    drop.classList.remove("busy");
+    state.busy = false;
+    $("apkInput").value = "";
+    await loadUserApps();
+  }
+}
+
+$("apkInput").addEventListener("change", (e) => installAPK(e.target.files[0]));
+dropTarget($("apkDrop"), $("apkDrop"), (files) => installAPK(files[0]));
+
+// Makes `zone` accept dropped files, highlighting `mark` while dragging.
+function dropTarget(zone, mark, onFiles) {
+  zone.addEventListener("dragover", (e) => {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    mark.classList.add("dragging");
+  });
+  zone.addEventListener("dragleave", (e) => {
+    if (!zone.contains(e.relatedTarget)) mark.classList.remove("dragging");
+  });
+  zone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    mark.classList.remove("dragging");
+    if (e.dataTransfer.files.length) onFiles([...e.dataTransfer.files]);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Files
+// ---------------------------------------------------------------------------
+
+async function loadFiles(path) {
+  let data;
+  try {
+    data = await api("files?path=" + encodeURIComponent(path));
+  } catch (err) {
+    setStatus("filesStatus", err.message, "bad");
+    if (path !== "/sdcard") return loadFiles("/sdcard");
+    return;
+  }
+  state.path = data.path;
+  renderCrumbs(data.path);
+  const rows = data.entries.map(fileRow);
+  $("filesList").replaceChildren(...(rows.length ? rows : [el("li", { class: "empty" }, "This folder is empty. Drop files here to copy them in.")]));
+}
+
+function renderCrumbs(path) {
+  const parts = path.split("/").filter(Boolean); // ["sdcard", "Books", ...]
+  const nodes = [];
+  parts.forEach((part, i) => {
+    const full = "/" + parts.slice(0, i + 1).join("/");
+    const label = i === 0 ? "Storage" : part;
+    if (i > 0) nodes.push(el("span", { class: "sep", "aria-hidden": "true" }, "/"));
+    if (i === parts.length - 1) nodes.push(el("span", { "aria-current": "location" }, label));
+    else nodes.push(el("button", { type: "button", onclick: () => openFolder(full) }, label));
+  });
+  $("crumbs").replaceChildren(...nodes);
+}
+
+function openFolder(path) {
+  setStatus("filesStatus", "");
+  loadFiles(path);
+}
+
+const deletable = (p) => p !== "/sdcard" && p !== "/sdcard/Android" && !p.startsWith("/sdcard/Android/");
+
+function fileRow(entry) {
+  const full = state.path + "/" + entry.name;
+  const name = entry.dir
+    ? el("button", { type: "button", class: "file-name", onclick: () => openFolder(full) }, entry.name)
+    : el("span", { class: "file-name" }, entry.name);
+  const meta = entry.dir ? "Folder" : `${formatSize(entry.size)}, ${entry.modified}`;
+  const actions = el("div", { class: "row-actions" },
+    entry.dir ? null : el("button", { type: "button", class: "text-button", onclick: () => download(full, entry.name) }, "Download"),
+    deletable(full) ? el("button", { type: "button", class: "text-button danger", disabled: !supportedNow(), onclick: () => removeFile(full, entry) }, "Delete") : null);
+  return el("li", { class: "row" }, el("div", { class: "row-text" }, name, el("span", { class: "row-why" }, meta)), actions);
+}
+
+async function download(path, name) {
+  setStatus("filesStatus", `Copying ${name} from the tablet…`);
+  state.busy = true;
+  try {
+    const res = await fetch("/api/download?path=" + encodeURIComponent(path), { headers: { "X-Token": token } });
+    if (!res.ok) {
+      let msg = "Couldn't download it.";
+      try { msg = (await res.json()).error || msg; } catch (_) { /* not JSON */ }
+      throw new Error(msg);
+    }
+    const url = URL.createObjectURL(await res.blob());
+    const a = el("a", { href: url, download: name });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    setStatus("filesStatus", `Downloaded ${name}. It's in your browser's downloads.`, "good");
+  } catch (err) {
+    setStatus("filesStatus", err.message === "Failed to fetch" ? "The app isn't running." : err.message, "bad");
+  } finally {
+    state.busy = false;
+  }
+}
+
+async function removeFile(path, entry) {
+  const what = entry.dir ? "folder" : "file";
+  const body = [el("p", {}, entry.dir
+    ? `${entry.name} is deleted from the tablet. Only empty folders can be deleted.`
+    : `${entry.name} is deleted from the tablet. This can't be undone.`)];
+  if (!(await confirmDialog(`Delete this ${what}?`, body, "Delete"))) return;
+  state.busy = true;
+  try {
+    await postJSON("delete", { path });
+    setStatus("filesStatus", `Deleted ${entry.name}.`, "good");
+  } catch (err) {
+    setStatus("filesStatus", err.message, "bad");
+  } finally {
+    state.busy = false;
+    await loadFiles(state.path);
+  }
+}
+
+async function uploadFiles(files) {
+  if (!files.length || !supportedNow()) return;
+  const total = files.reduce((n, f) => n + f.size, 0);
+  const label = files.length === 1 ? files[0].name : `${files.length} files`;
+  const form = new FormData();
+  form.append("path", state.path);
+  for (const f of files) form.append("files", f);
+  state.busy = true;
+  setStatus("filesStatus", `Sending ${label} (${formatSize(total)})…`);
+  try {
+    await upload("upload", form, (f) => {
+      setStatus("filesStatus", f < 1 ? `Sending ${label}… ${Math.round(f * 100)}%` : `Copying ${label} to the tablet…`);
+    });
+    flash();
+    setStatus("filesStatus", `Copied ${label} to ${state.path.replace("/sdcard", "Storage").split("/").join(" / ")}.`, "good");
+  } catch (err) {
+    setStatus("filesStatus", err.message, "bad");
+  } finally {
+    state.busy = false;
+    $("uploadInput").value = "";
+    await loadFiles(state.path);
+  }
+}
+
+$("uploadInput").addEventListener("change", (e) => uploadFiles([...e.target.files]));
+dropTarget($("filesView"), $("filesList"), uploadFiles);
 
 // ---------------------------------------------------------------------------
 // App lists
@@ -646,3 +951,8 @@ if (token) {
   postJSON("ping").catch(() => {});
   setInterval(() => postJSON("ping").catch(() => {}), 30000);
 }
+
+// A file dropped outside a drop area shouldn't open in the browser and
+// leave the app.
+window.addEventListener("dragover", (e) => e.preventDefault());
+window.addEventListener("drop", (e) => e.preventDefault());

@@ -32,6 +32,11 @@
         <span id="connText" role="status">Looking for your tablet…</span>
         <button type="button" class="text-button conn-refresh" id="refreshBtn" hidden>Refresh</button>
       </div>
+      <nav class="views" id="views" aria-label="Sections" hidden>
+        <button type="button" class="view-link" data-view="debloat" aria-current="page">Debloat</button>
+        <button type="button" class="view-link" data-view="apps">Apps</button>
+        <button type="button" class="view-link" data-view="files">Files</button>
+      </nav>
       <p class="sleep-status" id="sleepStatus" hidden></p>
 
       <form class="picture" id="pictureForm" hidden>
@@ -96,6 +101,50 @@
           <ul class="rows" id="protectedList"></ul>
         </section>
       </div>
+    </div>
+
+    <div id="appsView" class="two-col" hidden>
+      <div>
+        <section class="group">
+          <div class="group-head"><h2>Install an app</h2></div>
+          <label class="drop" id="apkDrop">
+            <input type="file" id="apkInput" accept=".apk,application/vnd.android.package-archive">
+            <span class="drop-title">Drop an APK file here</span>
+            <span class="drop-sub">or <u>choose one</u>. Installs the app, or updates it if it's already there.</span>
+          </label>
+          <p class="status-line" id="apkStatus" role="status" hidden></p>
+        </section>
+
+        <section class="group">
+          <div class="group-head">
+            <h2>Your apps</h2>
+            <span class="count" id="userAppsCount"></span>
+          </div>
+          <p class="group-note">Apps you installed. System apps are under Debloat.</p>
+          <ul class="rows" id="userAppsList"></ul>
+        </section>
+      </div>
+
+      <section class="group">
+        <div class="group-head"><h2>Recommended for e-ink</h2></div>
+        <p class="group-note" id="recNote">Lightweight apps that work well on this tablet. Download the APK from the official page, then drop it under Install an app.</p>
+        <div id="recList"></div>
+      </section>
+    </div>
+
+    <div id="filesView" hidden>
+      <section class="group">
+        <div class="group-head files-head">
+          <nav class="crumbs" id="crumbs" aria-label="Folder"></nav>
+          <label class="file-button small">
+            <input type="file" id="uploadInput" multiple>
+            <span>Upload files</span>
+          </label>
+        </div>
+        <p class="group-note">Drop files anywhere on this list to copy them into this folder.</p>
+        <p class="status-line" id="filesStatus" role="status" hidden></p>
+        <ul class="rows files" id="filesList"></ul>
+      </section>
     </div>
 
     <section class="result" id="result" hidden></section>

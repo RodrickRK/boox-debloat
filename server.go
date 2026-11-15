@@ -52,6 +52,13 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/picture", s.api(http.MethodPost, s.handlePicture))
 	mux.HandleFunc("/api/install-adb", s.api(http.MethodPost, s.handleInstallAdb))
 	mux.HandleFunc("/api/logs", s.api(http.MethodGet, s.handleLogs))
+	mux.HandleFunc("/api/user-apps", s.api(http.MethodGet, s.handleUserApps))
+	mux.HandleFunc("/api/install", s.api(http.MethodPost, s.handleInstall))
+	mux.HandleFunc("/api/uninstall", s.api(http.MethodPost, s.handleUninstall))
+	mux.HandleFunc("/api/files", s.api(http.MethodGet, s.handleFiles))
+	mux.HandleFunc("/api/download", s.api(http.MethodGet, s.handleDownload))
+	mux.HandleFunc("/api/upload", s.api(http.MethodPost, s.handleUpload))
+	mux.HandleFunc("/api/delete", s.api(http.MethodPost, s.handleDelete))
 	mux.HandleFunc("/api/ping", s.api(http.MethodPost, func(w http.ResponseWriter, r *http.Request) {
 		s.lastPing.Store(time.Now().Unix())
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
