@@ -45,13 +45,15 @@ homebrew_casks:
     license: MIT
     dependencies:
       - cask: android-platform-tools
-    hooks:
-      post:
-        # The app isn't signed by Apple, so clear the download quarantine flag.
-        install: |
-          if system_command("/usr/bin/xattr", args: ["-h"]).exit_status == 0
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/boox-debloat"]
-          end
+    # The app isn't signed by Apple, so clear the download quarantine flag.
+    # Homebrew deprecated `postflight` blocks for `postflight_steps`, which
+    # GoReleaser can't generate yet, so it goes in as a custom block.
+    custom_block: |
+      postflight_steps do
+        on_macos do
+          run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ "{{" }}staged_path{{ "}}" }}/boox-debloat"], must_succeed: false
+        end
+      end
 
 # Windows: scoop bucket add rodrickrk https://github.com/RodrickRK/scoop-bucket
 #          scoop install boox-debloat
