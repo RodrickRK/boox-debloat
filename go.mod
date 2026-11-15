@@ -1,3 +1,3 @@
 module github.com/RodrickRK/boox-debloat
 
-go 1.22
+go 1.24
