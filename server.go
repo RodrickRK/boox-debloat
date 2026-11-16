@@ -52,6 +52,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/apps", s.api(http.MethodGet, s.handleApps))
 	mux.HandleFunc("/api/apply", s.api(http.MethodPost, s.handleApply))
 	mux.HandleFunc("/api/restore-all", s.api(http.MethodPost, s.handleRestoreAll))
+	mux.HandleFunc("/api/enable-play", s.api(http.MethodPost, s.handleEnablePlay))
 	mux.HandleFunc("/api/reboot", s.api(http.MethodPost, s.handleReboot))
 	mux.HandleFunc("/api/picture", s.api(http.MethodPost, s.handlePicture))
 	mux.HandleFunc("/api/install-adb", s.api(http.MethodPost, s.handleInstallAdb))
@@ -367,6 +368,29 @@ func (s *Server) handleRestoreAll(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, applyResp{Results: []Result{}})
 		return
 	}
+	s.run(w, dev, changes)
+}
+
+// handleEnablePlay turns on Google Play Store, Play services and Google
+// Services Framework, but only the ones that aren't already on.
+func (s *Server) handleEnablePlay(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	dev, ok := s.readyDevice(w, true)
+	if !ok {
+		return
+	}
+	states, err := readStates(s.be, dev.Serial, s.cat)
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	changes := playChanges(states)
+	if len(changes) == 0 {
+		writeJSON(w, http.StatusOK, applyResp{Results: []Result{}})
+		return
+	}
+	s.log.add("Turning on Google Play")
 	s.run(w, dev, changes)
 }
 

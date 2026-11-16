@@ -128,6 +128,8 @@ Set it from the **file browser**. The hidden Wallpaper Settings page crashes on 
 
 ### Google Play
 
+Boox ships Google Play turned off. The left panel shows **Google Play: on** or **off**. When it's off, press **Turn on Google Play**: it turns on Google Play Store, Google Play services and Google Services Framework, skipping any that are already on, and saves a backup first. Restart the tablet when it asks.
+
 The Star Education firmware isn't certified by Google, so Play Store may say **"This device isn't Play Protect certified"** or refuse to sign in. Boox Debloat never removes Google Play, Play Services or Google Services Framework, so this isn't caused by debloating. To fix it, register the tablet with Google:
 
 1. Sign in to a Google account on the tablet (Settings, then Accounts), or at least open Play Store once.

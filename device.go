@@ -85,6 +85,24 @@ func readStates(b Backend, serial string, c *Catalog) (map[string]string, error)
 	return states, nil
 }
 
+// playPackages are what Boox's "Enable Google Play" switch turns on.
+var playPackages = []string{"com.google.android.gsf", "com.google.android.gms", "com.android.vending"}
+
+// playChanges returns what's needed to turn Google Play on: restore what
+// was removed and enable what was turned off. Missing packages are skipped.
+func playChanges(states map[string]string) []Change {
+	var out []Change
+	for _, id := range playPackages {
+		switch states[id] {
+		case stateRemoved:
+			out = append(out, Change{ID: id, Action: actRestore})
+		case stateDisabled:
+			out = append(out, Change{ID: id, Action: actEnable})
+		}
+	}
+	return out
+}
+
 // validate checks every change before anything is sent to the tablet.
 // Protected apps can only ever be restored or enabled.
 func validate(c *Catalog, changes []Change) error {

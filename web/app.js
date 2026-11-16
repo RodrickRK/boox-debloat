@@ -182,6 +182,7 @@ function renderDevice(status) {
     $("deviceName").textContent = "Boox Debloat";
     show("deviceMeta", false);
     show("sleepStatus", false);
+    show("playStatus", false);
     show("pictureForm", false);
     show("restartBox", false);
     show("views", false);
@@ -686,6 +687,8 @@ function render() {
     ? `Sleep screen: needs ${broken.map((a) => a.name).join(" and ")}. Bring it back under Always kept.`
     : "Sleep screen: ready";
 
+  renderPlay(keep);
+
   const supported = state.status && state.status.supported;
   const removable = remove.filter((a) => installed(a.state) && state.pending.get(a.id) !== "remove");
   $("removeAll").disabled = !supported || removable.length === 0;
@@ -696,6 +699,40 @@ function render() {
   show("discard", n > 0);
   $("restoreAll").disabled = !supported;
 }
+
+// Google Play: Boox ships it turned off. Offer to turn it on only when it isn't.
+const playIds = ["com.google.android.gsf", "com.google.android.gms", "com.android.vending"];
+
+function renderPlay(keep) {
+  const apps = keep.filter((a) => playIds.includes(a.id));
+  const box = $("playStatus");
+  const btn = $("enablePlay");
+  box.hidden = false;
+  let text, off = false;
+  if (apps.length < playIds.length || apps.some((a) => a.state === "missing")) {
+    text = "Google Play: not on this firmware";
+  } else if (apps.every((a) => a.state === "enabled")) {
+    text = "Google Play: on";
+  } else {
+    text = "Google Play: off";
+    off = true;
+  }
+  $("playText").textContent = text;
+  box.classList.toggle("off", off);
+  btn.hidden = !off;
+  btn.disabled = !(state.status && state.status.supported) || state.busy;
+}
+
+$("enablePlay").addEventListener("click", async () => {
+  const body = [
+    el("p", {}, "Turns on Google Play Store, Google Play services and Google Services Framework. Apps already on are left alone."),
+    el("p", {}, "If Play Store then says the tablet isn't Play Protect certified, follow ",
+      el("a", { href: "help.html#play", target: "_blank", rel: "noopener" }, "Google Play in Help"), "."),
+  ];
+  const note = "Your current app list is saved as a backup first.";
+  if (!(await confirmDialog("Turn on Google Play?", body, "Turn on", { note }))) return;
+  await apply(() => postJSON("enable-play"));
+});
 
 $("removeAll").addEventListener("click", () => {
   for (const a of state.apps.remove) {
@@ -791,7 +828,7 @@ async function askToRestart() {
 }
 
 function setBusy(on, text) {
-  for (const id of ["review", "restoreAll", "removeAll", "discard"]) $(id).disabled = on;
+  for (const id of ["review", "restoreAll", "removeAll", "discard", "enablePlay"]) $(id).disabled = on;
   if (on) $("review").textContent = text;
   document.body.style.cursor = on ? "progress" : "";
 }

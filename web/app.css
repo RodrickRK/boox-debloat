@@ -178,6 +178,10 @@ p { margin: 0; }
 .sleep-status { margin-top: 10px; }
 .sleep-status.bad { color: var(--warn); }
 
+.play-status { margin-top: 6px; display: grid; gap: 8px; justify-items: start; }
+.play-status p { margin: 0; }
+.play-status.off p { color: var(--muted); }
+
 /* ---------- Sleep picture form ---------- */
 .picture {
   margin-top: 20px;

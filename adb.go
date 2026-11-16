@@ -203,6 +203,10 @@ func newDemoBackend(c *Catalog) *demoBackend {
 	}
 	// Show the most common problem: ksync removed by an older guide.
 	d.state["com.onyx.android.ksync"] = "removed"
+	// Boox ships Google Play turned off until "Enable Google Play" is used.
+	for _, p := range playPackages {
+		d.state[p] = "disabled"
+	}
 	for _, p := range []string{"android", "com.android.settings", "com.android.systemui", "org.koreader.launcher"} {
 		d.state[p] = "enabled"
 	}

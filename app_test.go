@@ -121,6 +121,23 @@ func TestParseDevicesNoPermissions(t *testing.T) {
 	}
 }
 
+func TestPlayChanges(t *testing.T) {
+	got := playChanges(map[string]string{
+		"com.google.android.gsf": stateEnabled,
+		"com.google.android.gms": stateRemoved,
+		"com.android.vending":    stateDisabled,
+	})
+	if len(got) != 2 || got[0] != (Change{"com.google.android.gms", actRestore}) || got[1] != (Change{"com.android.vending", actEnable}) {
+		t.Fatalf("unexpected: %+v", got)
+	}
+	if err := validate(testCatalog(t), got); err != nil {
+		t.Fatalf("play changes should pass validation: %v", err)
+	}
+	if n := len(playChanges(map[string]string{"com.android.vending": stateMissing})); n != 0 {
+		t.Fatalf("missing packages should be skipped, got %d changes", n)
+	}
+}
+
 func TestFitToScreen(t *testing.T) {
 	src := image.NewRGBA(image.Rect(0, 0, 3000, 2000)) // wide and black
 	for i := 3; i < len(src.Pix); i += 4 {
