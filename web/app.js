@@ -708,9 +708,14 @@ function renderPlay(keep) {
   const box = $("playStatus");
   const btn = $("enablePlay");
   box.hidden = false;
-  let text, off = false;
-  if (apps.length < playIds.length || apps.some((a) => a.state === "missing")) {
+  const byId = Object.fromEntries(apps.map((a) => [a.id, a.state]));
+  const has = (id) => byId[id] && byId[id] !== "missing";
+  let text, off = false, needStore = false;
+  if (!has("com.google.android.gms") || !has("com.google.android.gsf")) {
     text = "Google Play: not on this firmware";
+  } else if (!has("com.android.vending")) {
+    text = "Google Play: Play Store missing";
+    needStore = true;
   } else if (apps.every((a) => a.state === "enabled")) {
     text = "Google Play: on";
   } else {
@@ -718,10 +723,35 @@ function renderPlay(keep) {
     off = true;
   }
   $("playText").textContent = text;
-  box.classList.toggle("off", off);
+  box.classList.toggle("off", off || needStore);
   btn.hidden = !off;
   btn.disabled = !(state.status && state.status.supported) || state.busy;
+  $("playInstall").hidden = !needStore;
+  $("playInput").disabled = !(state.status && state.status.supported) || state.busy;
 }
+
+$("playInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file || !supportedNow()) return;
+  const form = new FormData();
+  form.append("apk", file);
+  state.busy = true;
+  $("playInput").disabled = true;
+  setStatus("playMsg", `Sending ${file.name}…`);
+  try {
+    await upload("install-play", form, (f) => {
+      setStatus("playMsg", f < 1 ? `Sending ${file.name}… ${Math.round(f * 100)}%` : "Checking it's signed by Google, then installing…");
+    });
+    flash();
+    setStatus("playMsg", "Play Store is installed. Open it on the tablet and sign in.", "good");
+  } catch (err) {
+    setStatus("playMsg", err.message, "bad");
+  } finally {
+    state.busy = false;
+    await loadApps();
+  }
+});
 
 $("enablePlay").addEventListener("click", async () => {
   const body = [

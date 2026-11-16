@@ -53,6 +53,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/apply", s.api(http.MethodPost, s.handleApply))
 	mux.HandleFunc("/api/restore-all", s.api(http.MethodPost, s.handleRestoreAll))
 	mux.HandleFunc("/api/enable-play", s.api(http.MethodPost, s.handleEnablePlay))
+	mux.HandleFunc("/api/install-play", s.api(http.MethodPost, s.handleInstallPlay))
 	mux.HandleFunc("/api/reboot", s.api(http.MethodPost, s.handleReboot))
 	mux.HandleFunc("/api/picture", s.api(http.MethodPost, s.handlePicture))
 	mux.HandleFunc("/api/install-adb", s.api(http.MethodPost, s.handleInstallAdb))

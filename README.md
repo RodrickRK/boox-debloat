@@ -111,7 +111,7 @@ Backups are saved here:
 2. Under **Recommended for e-ink**, open an app's official page (F-Droid or GitHub releases) and download its `.apk`.
 3. Drop it onto **Install an app**. It installs, or updates the app if it's already there.
 
-**Your apps** lists the apps you installed, each with **Uninstall**. The recommended list includes KOReader, Librera, Mihon, EinkBro, inkOS, Key Mapper, AnkiDroid, Kiwix, Material Files, LocalSend, Syncthing-Fork, F-Droid, Aurora Store and Obtainium. It links only to official sources, never to APK mirror sites.
+**Your apps** lists the apps you installed, each with **Uninstall**. The recommended list includes KOReader, Librera, Mihon, EinkBro, inkOS, Key Mapper, AnkiDroid, Kiwix, Material Files, LocalSend, Syncthing-Fork, F-Droid, Aurora Store and Obtainium. It links only to official sources, never to APK mirror sites. The one exception is the Play Store, which Google doesn't offer as a download; the app checks Google's signature on it before installing (see [Google Play](#google-play)).
 
 ### Files
 
@@ -128,7 +128,11 @@ Set it from the **file browser**. The hidden Wallpaper Settings page crashes on 
 
 ### Google Play
 
-Boox ships Google Play turned off. The left panel shows **Google Play: on** or **off**. When it's off, press **Turn on Google Play**: it turns on Google Play Store, Google Play services and Google Services Framework, skipping any that are already on, and saves a backup first. Restart the tablet when it asks.
+The left panel shows the state of Google Play:
+
+- **Play Store missing.** The C69 M Star's Star Education firmware comes with Google Play services but no Play Store. Download Google's Play Store APK (the **nodpi** version), for example from [APKMirror](https://www.apkmirror.com/apk/google-inc/google-play-store/), and choose it with **Install Play Store**. The app reads the file's manifest and signing certificate and only installs it if it's `com.android.vending`, signed with the same Google key as the Google apps that came on your tablet. Anything else is refused.
+- **Off.** Press **Turn on Google Play**: it turns on Google Play Store, Google Play services and Google Services Framework, skipping any that are already on, and saves a backup first. Restart the tablet when it asks.
+- **On.** Nothing to do.
 
 The Star Education firmware isn't certified by Google, so Play Store may say **"This device isn't Play Protect certified"** or refuse to sign in. Boox Debloat never removes Google Play, Play Services or Google Services Framework, so this isn't caused by debloating. To fix it, register the tablet with Google:
 

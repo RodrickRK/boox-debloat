@@ -203,10 +203,12 @@ func newDemoBackend(c *Catalog) *demoBackend {
 	}
 	// Show the most common problem: ksync removed by an older guide.
 	d.state["com.onyx.android.ksync"] = "removed"
-	// Boox ships Google Play turned off until "Enable Google Play" is used.
+	// Like the real Star Education firmware: no Play Store at all, and
+	// (to show the Turn on step too) Play services turned off.
 	for _, p := range playPackages {
 		d.state[p] = "disabled"
 	}
+	delete(d.state, playStorePkg)
 	for _, p := range []string{"android", "com.android.settings", "com.android.systemui", "org.koreader.launcher"} {
 		d.state[p] = "enabled"
 	}
@@ -315,6 +317,10 @@ func (d *demoBackend) Pull(serial, remote, local string) error {
 
 func (d *demoBackend) Install(serial, apk string) (string, error) {
 	time.Sleep(600 * time.Millisecond)
+	if pkg, err := apkPackageName(apk); err == nil && pkg == playStorePkg {
+		d.state[pkg] = "enabled"
+		return "Performing Streamed Install\nSuccess\n", nil
+	}
 	d.user["com.example.demo"+strconv.Itoa(len(d.user))] = "1.0"
 	return "Performing Streamed Install\nSuccess\n", nil
 }

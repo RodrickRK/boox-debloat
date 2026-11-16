@@ -180,7 +180,12 @@ p { margin: 0; }
 
 .play-status { margin-top: 6px; display: grid; gap: 8px; justify-items: start; }
 .play-status p { margin: 0; }
-.play-status.off p { color: var(--muted); }
+.play-status.off > p:first-child { color: var(--muted); }
+.play-install { display: grid; gap: 8px; justify-items: start; }
+.play-help { font-size: var(--s-1); color: var(--muted); max-width: 46ch; }
+.play-help a { color: var(--ink); }
+.play-msg { font-size: var(--s-1); max-width: 46ch; }
+.play-msg.bad { color: var(--warn); }
 
 /* ---------- Sleep picture form ---------- */
 .picture {
