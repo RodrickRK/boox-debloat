@@ -15,6 +15,7 @@ type activityLog struct {
 	mu    sync.Mutex
 	lines []string
 	max   int
+	total int // lines ever added, so readers can ask for what's new
 }
 
 func newActivityLog() *activityLog { return &activityLog{max: 400} }
@@ -24,6 +25,7 @@ func (l *activityLog) add(format string, a ...any) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.lines = append(l.lines, line)
+	l.total++
 	if len(l.lines) > l.max {
 		l.lines = l.lines[len(l.lines)-l.max:]
 	}
@@ -33,6 +35,20 @@ func (l *activityLog) text() string {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return strings.Join(l.lines, "\n")
+}
+
+// since returns the lines added after the first n, and the count to ask
+// from next time. If n is ahead of the log (the app restarted), it starts over.
+func (l *activityLog) since(n int) ([]string, int, bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	reset := n < 0 || n > l.total
+	first := l.total - len(l.lines) // number of the oldest line still kept
+	if reset || n < first {
+		n = first
+	}
+	out := append([]string{}, l.lines[n-first:]...) // [] not null in JSON
+	return out, l.total, reset
 }
 
 // private hides the user's home folder and the tablet's full serial number,

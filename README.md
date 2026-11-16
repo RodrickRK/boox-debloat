@@ -18,9 +18,9 @@ Apps are removed with `pm uninstall --user 0`, which only hides them from your u
 
 ## What you need
 
-- A **Mac** or a **Windows PC**.
+- A **Mac**, a **Windows PC** or a **Linux PC**.
 - A **USB cable that carries data**. Some charging-only cables don't.
-- **Homebrew** on Mac or **Scoop** on Windows, to install the app. If you don't have them, see [Install without Homebrew or Scoop](#install-without-homebrew-or-scoop).
+- **Homebrew** on Mac or **Scoop** on Windows, to install the app. If you don't have them, see [Install without Homebrew or Scoop](#install-without-homebrew-or-scoop). Linux needs nothing extra.
 
 ## 1. Install
 
@@ -45,7 +45,29 @@ scoop install boox-debloat
 
 No Scoop yet? Install it from [scoop.sh](https://scoop.sh) first.
 
-Both install **adb** (Android platform tools), which the app uses to talk to the tablet.
+### Linux
+
+1. Download `linux_amd64.tar.gz` from the [latest release](https://github.com/RodrickRK/boox-debloat/releases/latest) (`linux_arm64.tar.gz` on ARM, like a Raspberry Pi).
+2. Open a terminal in the folder you downloaded it to and run:
+
+   ```bash
+   tar -xzf boox-debloat_*_linux_*.tar.gz
+   mkdir -p ~/.local/bin && mv boox-debloat ~/.local/bin/
+   ```
+
+3. Install adb and the USB permissions it needs:
+
+   | Distro | Command |
+   | --- | --- |
+   | Debian, Ubuntu, Mint, Pop!_OS | `sudo apt install adb android-sdk-platform-tools-common` then `sudo usermod -aG plugdev $USER` |
+   | Fedora | `sudo dnf install android-tools` |
+   | Arch, Manjaro | `sudo pacman -S android-tools android-udev` |
+
+4. Log out and back in, so the USB permission takes effect.
+
+On 64-bit Intel or AMD PCs you can skip installing adb and press **Download Android platform tools** in the app instead, but you still need the USB permission package from step 3.
+
+The Mac and Windows installs both include **adb** (Android platform tools), which the app uses to talk to the tablet.
 
 If adb is ever missing, the app shows a **Download Android platform tools** button. It downloads Google's official platform tools (about 10 MB) into the app's own settings folder, so it needs no Homebrew, Scoop or admin rights. You can also [download it from Google](https://developer.android.com/tools/releases/platform-tools) yourself.
 
@@ -60,7 +82,7 @@ The app can only reach the tablet with USB debugging on.
 
 ## 3. Open the app
 
-In Terminal (Mac) or PowerShell (Windows), run:
+In Terminal (Mac), PowerShell (Windows) or a terminal (Linux), run:
 
 ```bash
 boox-debloat
@@ -165,11 +187,13 @@ brew upgrade --cask boox-debloat
 scoop update boox-debloat
 ```
 
+**Linux:** download the new release and repeat steps 1 and 2 of the Linux install.
+
 ## Uninstall
 
 Uninstalling the app doesn't change your tablet. Restore any apps you want back first.
 
-If the app downloaded platform tools for you, they stay in `~/Library/Application Support/boox-debloat/platform-tools` (Mac) or `%AppData%\boox-debloat\platform-tools` (Windows). Delete that folder to remove them.
+If the app downloaded platform tools for you, they stay in `~/Library/Application Support/boox-debloat/platform-tools` (Mac), `%AppData%\boox-debloat\platform-tools` (Windows) or `~/.config/boox-debloat/platform-tools` (Linux). Delete that folder to remove them.
 
 **Mac:**
 
@@ -181,6 +205,12 @@ brew uninstall --cask boox-debloat
 
 ```powershell
 scoop uninstall boox-debloat
+```
+
+**Linux:**
+
+```bash
+rm ~/.local/bin/boox-debloat
 ```
 
 ## Install without Homebrew or Scoop
@@ -199,11 +229,15 @@ On a Mac, the first run may say the app is from an unidentified developer. Right
 
 **Help and FAQ** in the app's left panel opens these instructions and answers in a new tab.
 
+**Show activity** in the left panel opens a side panel with every command the app sends to the tablet and what the tablet answers, updated as it happens.
+
 To report a problem, choose **Copy logs** in the left panel, then paste them into [a new issue](https://github.com/RodrickRK/boox-debloat/issues/new) with what you tried. The logs only cover this run of the app. They show just the last four characters of the tablet's serial number and hide your user folder.
 
 - **"Plug in your tablet" doesn't go away.** Check that USB Debug Mode is on and the cable carries data, then press **Refresh**. Run `adb devices` to see whether your computer can see the tablet.
 - **"Install Android platform tools".** adb is missing. Press **Download Android platform tools** on that screen, or [download it from Google](https://developer.android.com/tools/releases/platform-tools) and press **Refresh**.
 - **"Waiting for USB permission".** Unlock the tablet and tap **Allow** on the prompt.
+- **Linux: "Linux needs permission to use the tablet".** adb sees the tablet but can't open it. Install the USB permission package for your distro (Linux install, step 3), log out and back in, run `adb kill-server`, then replug the tablet.
+- **Linux: `boox-debloat: command not found`.** `~/.local/bin` isn't on your PATH yet. Log out and back in, or run it as `~/.local/bin/boox-debloat`.
 - **Windows doesn't see the tablet.** Install the [Google USB driver](https://developer.android.com/studio/run/win-usb), then unplug and replug the tablet.
 - **"This page has expired".** Close the page and run `boox-debloat` again. Each run opens a new address.
 - **"This device isn't Play Protect certified".** Register the tablet's GSF ID with Google, then force stop and clear data for Play Store and Play services. See [Google Play](#google-play).

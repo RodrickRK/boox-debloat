@@ -25,6 +25,7 @@
       <a href="#sleep">Sleep picture</a>
       <a href="#play">Google Play</a>
       <a href="#faq">Questions</a>
+      <a href="#linux">Linux</a>
       <a href="#report">Report a problem</a>
     </nav>
   </header>
@@ -39,6 +40,18 @@
       <li>Back in the app, the dot next to <strong>Connected</strong> fills in. Press <strong>Refresh</strong> to check straight away.</li>
     </ol>
     <p>If the app says <strong>Install Android platform tools</strong>, adb is missing. Press <strong>Download Android platform tools</strong> on that screen. It fetches Google's official tools into the app's own folder, with no admin rights needed. Or <a href="https://developer.android.com/tools/releases/platform-tools" target="_blank" rel="noopener noreferrer">download it from Google</a>, then press Refresh.</p>
+  </section>
+
+  <section id="linux">
+    <h2>Linux</h2>
+    <p>Download <code>linux_amd64.tar.gz</code> (or <code>linux_arm64.tar.gz</code> on ARM) from the <a href="https://github.com/RodrickRK/boox-debloat/releases/latest" target="_blank" rel="noopener noreferrer">latest release</a>, unpack it with <code>tar -xzf</code>, and run <code>./boox-debloat</code>.</p>
+    <p>Linux also needs permission to use the tablet over USB. Install adb and its USB rules, then log out and back in:</p>
+    <ul>
+      <li>Debian, Ubuntu, Mint: <code>sudo apt install adb android-sdk-platform-tools-common</code>, then <code>sudo usermod -aG plugdev $USER</code></li>
+      <li>Fedora: <code>sudo dnf install android-tools</code></li>
+      <li>Arch, Manjaro: <code>sudo pacman -S android-tools android-udev</code></li>
+    </ul>
+    <p>If the app says <strong>Linux needs permission to use the tablet</strong>, the USB rules aren't active yet. Log out and back in, run <code>adb kill-server</code>, and replug the tablet.</p>
   </section>
 
   <section id="use">
@@ -136,6 +149,11 @@
     </details>
 
     <details>
+      <summary>Linux says it needs permission to use the tablet</summary>
+      <p>adb can see the tablet but isn't allowed to open it. Install the USB rules for your distro (see <a href="#linux">Linux</a>), log out and back in, run <code>adb kill-server</code>, then unplug and replug the tablet.</p>
+    </details>
+
+    <details>
       <summary>Windows doesn't see the tablet</summary>
       <p>Install the <a href="https://developer.android.com/studio/run/win-usb" target="_blank" rel="noopener noreferrer">Google USB driver</a>, then unplug and replug the tablet.</p>
     </details>
@@ -164,6 +182,7 @@
   <section id="report">
     <h2>Report a problem</h2>
     <ol class="steps">
+      <li>To watch what the app does as it happens, choose <strong>Show activity</strong> in the left panel.</li>
       <li>In the app, choose <strong>Copy logs</strong> in the left panel. It copies what the app did and what the tablet answered.</li>
       <li>Open <a href="https://github.com/RodrickRK/boox-debloat/issues/new" target="_blank" rel="noopener noreferrer">a new issue on GitHub</a>, say what you tried, and paste the logs.</li>
     </ol>

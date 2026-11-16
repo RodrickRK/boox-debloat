@@ -117,7 +117,12 @@ func parseDevices(out string) []DeviceEntry {
 		if len(f) < 2 || strings.HasPrefix(line, "List of devices") || strings.HasPrefix(line, "*") {
 			continue
 		}
-		list = append(list, DeviceEntry{Serial: f[0], State: f[1]})
+		state := f[1]
+		// Linux without udev rules: "SERIAL	no permissions (user ... udev rules?) ..."
+		if state == "no" && len(f) > 2 && strings.HasPrefix(f[2], "permissions") {
+			state = "nopermission"
+		}
+		list = append(list, DeviceEntry{Serial: f[0], State: state})
 	}
 	return list
 }

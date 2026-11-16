@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -55,6 +56,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/picture", s.api(http.MethodPost, s.handlePicture))
 	mux.HandleFunc("/api/install-adb", s.api(http.MethodPost, s.handleInstallAdb))
 	mux.HandleFunc("/api/logs", s.api(http.MethodGet, s.handleLogs))
+	mux.HandleFunc("/api/activity", s.api(http.MethodGet, s.handleActivity))
 	mux.HandleFunc("/api/user-apps", s.api(http.MethodGet, s.handleUserApps))
 	mux.HandleFunc("/api/install", s.api(http.MethodPost, s.handleInstall))
 	mux.HandleFunc("/api/uninstall", s.api(http.MethodPost, s.handleUninstall))
@@ -113,7 +115,7 @@ func (s *Server) api(method string, h http.HandlerFunc) http.HandlerFunc {
 
 type statusResp struct {
 	Adb        bool   `json:"adb"`
-	State      string `json:"state"` // none, unauthorized, offline, multiple, device
+	State      string `json:"state"` // none, unauthorized, nopermission, offline, multiple, device
 	Serial     string `json:"serial,omitempty"`
 	Model      string `json:"model,omitempty"`
 	Firmware   string `json:"firmware,omitempty"`
@@ -143,6 +145,10 @@ func (s *Server) pickDevice() (DeviceEntry, string, error) {
 			ready = append(ready, d)
 		case "unauthorized":
 			state = "unauthorized"
+		case "nopermission":
+			if state != "unauthorized" {
+				state = "nopermission"
+			}
 		default:
 			if state == "none" {
 				state = "offline"
@@ -509,6 +515,24 @@ func (s *Server) handlePicture(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 // Logs
 // ---------------------------------------------------------------------------
+
+// handleActivity returns the log lines added since ?since=N, for the live
+// activity panel. Lines are made private the same way as Copy logs.
+func (s *Server) handleActivity(w http.ResponseWriter, r *http.Request) {
+	since, err := strconv.Atoi(r.URL.Query().Get("since"))
+	if err != nil {
+		since = 0
+	}
+	s.mu.Lock()
+	serial := s.lastDev.Serial
+	s.mu.Unlock()
+	lines, next, reset := s.log.since(since)
+	for i, l := range lines {
+		lines[i] = private(l, serial)
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, map[string]any{"lines": lines, "next": next, "reset": reset})
+}
 
 // handleLogs returns a plain-text report to paste into a bug report.
 func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {

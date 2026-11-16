@@ -150,6 +150,15 @@ function renderMessage(status) {
   } else if (status.state === "multiple") {
     title = "More than one Android device is connected.";
     body = [el("p", {}, "Unplug the others, or start the app with boox-debloat -serial <serial>.")];
+  } else if (status.state === "nopermission") {
+    title = "Linux needs permission to use the tablet.";
+    body = [
+      el("p", {}, "adb can see the tablet but isn't allowed to talk to it. Give your user USB access, then unplug and replug the tablet:"),
+      el("p", {}, "Debian or Ubuntu: ", el("code", {}, "sudo apt install android-sdk-platform-tools-common"), " then ", el("code", {}, "sudo usermod -aG plugdev $USER")),
+      el("p", {}, "Fedora: ", el("code", {}, "sudo dnf install android-tools")),
+      el("p", {}, "Arch: ", el("code", {}, "sudo pacman -S android-udev")),
+      el("p", {}, "Then log out and back in, run ", el("code", {}, "adb kill-server"), ", and press Refresh. The ", el("a", { href: "help.html#linux", target: "_blank", rel: "noopener" }, "help page"), " has more."),
+    ];
   } else if (status.state === "offline") {
     title = "The tablet isn't responding.";
     body = [el("p", {}, "Unplug it, plug it back in, and unlock the screen.")];
@@ -924,6 +933,73 @@ async function copyText(text) {
     box.remove();
     return ok;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Activity panel: the log, live
+// ---------------------------------------------------------------------------
+
+const activity = { open: false, next: 0, timer: null };
+
+function atBottom(box) {
+  return box.scrollHeight - box.scrollTop - box.clientHeight < 24;
+}
+
+async function pollActivity() {
+  const box = $("activityLog");
+  const live = $("activityLive");
+  try {
+    const data = await api("activity?since=" + activity.next);
+    const stick = atBottom(box);
+    if (data.reset) box.textContent = "";
+    const lines = data.lines || [];
+    if (lines.length) {
+      box.append(document.createTextNode((box.textContent ? "\n" : "") + lines.join("\n")));
+      if (stick) box.scrollTop = box.scrollHeight;
+    }
+    activity.next = data.next;
+    live.textContent = "Live";
+    live.classList.remove("off");
+  } catch (err) {
+    live.textContent = err.message === "Failed to fetch" ? "App not running" : err.status === 401 ? "Page expired" : "Paused";
+    live.classList.add("off");
+  }
+}
+
+function setActivity(open, moveFocus = true) {
+  activity.open = open;
+  $("activity").hidden = !open;
+  document.body.classList.toggle("activity-open", open);
+  $("showActivity").setAttribute("aria-expanded", String(open));
+  $("showActivity").textContent = open ? "Hide activity" : "Show activity";
+  clearInterval(activity.timer);
+  activity.timer = null;
+  if (open) {
+    pollActivity().then(() => { const box = $("activityLog"); box.scrollTop = box.scrollHeight; });
+    activity.timer = setInterval(pollActivity, 2000);
+    if (moveFocus) $("activityClose").focus();
+  } else if (moveFocus) {
+    $("showActivity").focus();
+  }
+  try { localStorage.setItem("activityOpen", open ? "1" : ""); } catch (_) { /* storage blocked */ }
+}
+
+$("showActivity").addEventListener("click", () => setActivity(!activity.open));
+$("activityClose").addEventListener("click", () => setActivity(false));
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && activity.open && !$("dialog").open) setActivity(false);
+});
+
+let activityCopyTimer;
+$("activityCopy").addEventListener("click", async () => {
+  const btn = $("activityCopy");
+  btn.textContent = (await copyText($("activityLog").textContent)) ? "Copied" : "Couldn't copy";
+  clearTimeout(activityCopyTimer);
+  activityCopyTimer = setTimeout(() => { btn.textContent = "Copy"; }, 3000);
+});
+
+if (token) {
+  try { if (localStorage.getItem("activityOpen")) setActivity(true, false); } catch (_) { /* storage blocked */ }
 }
 
 let copyTimer;

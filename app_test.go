@@ -113,6 +113,14 @@ func TestParseDevices(t *testing.T) {
 	}
 }
 
+func TestParseDevicesNoPermissions(t *testing.T) {
+	out := "List of devices attached\n2308C69HDM09563\tno permissions (user in plugdev group; are your udev rules wrong?); see [http://developer.android.com/tools/device.html] usb:1-1\n"
+	got := parseDevices(out)
+	if len(got) != 1 || got[0].State != "nopermission" {
+		t.Fatalf("unexpected: %+v", got)
+	}
+}
+
 func TestFitToScreen(t *testing.T) {
 	src := image.NewRGBA(image.Rect(0, 0, 3000, 2000)) // wide and black
 	for i := 3; i < len(src.Pix); i += 4 {
@@ -152,6 +160,27 @@ func TestActivityLogKeepsLast(t *testing.T) {
 	got := l.text()
 	if strings.Contains(got, "line 1") || !strings.Contains(got, "line 4") {
 		t.Fatalf("unexpected log: %q", got)
+	}
+}
+
+func TestActivityLogSince(t *testing.T) {
+	l := &activityLog{max: 3}
+	for i := 0; i < 5; i++ {
+		l.add("line %d", i)
+	}
+	lines, next, reset := l.since(3)
+	if len(lines) != 2 || !strings.HasSuffix(lines[0], "line 3") || next != 5 || reset {
+		t.Fatalf("since(3) = %q, %d, %v", lines, next, reset)
+	}
+	lines, _, _ = l.since(0) // older lines were dropped; start at the oldest kept
+	if len(lines) != 3 || !strings.HasSuffix(lines[0], "line 2") {
+		t.Fatalf("since(0) = %q", lines)
+	}
+	if lines, next, reset = l.since(5); lines == nil || len(lines) != 0 || next != 5 || reset {
+		t.Fatalf("since(5) = %q, %d, %v", lines, next, reset)
+	}
+	if _, _, reset = l.since(99); !reset {
+		t.Fatal("since(99) should reset")
 	}
 }
 

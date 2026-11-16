@@ -60,6 +60,7 @@
 
       <nav class="help-links" aria-label="Help">
         <a href="help.html" target="_blank" rel="noopener">Help and FAQ</a>
+        <button type="button" class="text-button" id="showActivity" aria-controls="activity" aria-expanded="false">Show activity</button>
         <button type="button" class="text-button" id="copyLogs">Copy logs</button>
         <span class="copy-note" id="copyNote" role="status"></span>
       </nav>
@@ -159,6 +160,18 @@
     <button type="button" class="text-button" id="restoreAll">Restore all apps</button>
   </div>
 </div>
+
+<aside class="activity" id="activity" aria-label="Activity" hidden>
+  <div class="activity-head">
+    <h2>Activity</h2>
+    <span class="activity-live" id="activityLive">Live</span>
+    <span class="bar-space"></span>
+    <button type="button" class="text-button" id="activityCopy">Copy</button>
+    <button type="button" class="text-button" id="activityClose">Close</button>
+  </div>
+  <p class="activity-why">Every command the app sends to the tablet, and what the tablet answers.</p>
+  <pre class="activity-log" id="activityLog" tabindex="0" aria-live="polite"></pre>
+</aside>
 
 <dialog id="dialog">
   <form method="dialog" class="dialog">
