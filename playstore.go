@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"net/http"
 	"os"
@@ -13,10 +14,19 @@ import (
 // doesn't offer the Play Store as a download, so the person picks the APK
 // themselves and the app checks it before installing:
 //   - its manifest must say it's com.android.vending, and
-//   - it must be signed with the same Google key as the Google apps that
-//     came with the tablet.
+//   - it must be signed with Google's Play Store key, or with the same key
+//     as the Google apps that came with the tablet. (The C69 M Star's own
+//     Google apps use a different Google key from the Play Store.)
 
 const playStorePkg = "com.android.vending"
+
+// googlePlayKeySHA256 is the SHA-256 of the certificate Google signs the
+// Play Store and Play services with (SHA-1 38:91:8A:45:...:2C:ED:57:88).
+const googlePlayKeySHA256 = "F0FD6C5B410F25CB25C3B53346C8972FAE30F8EE7411DF910480AD6B2D60DB83"
+
+func isGooglePlayKey(cert []byte) bool {
+	return len(cert) > 0 && fmt.Sprintf("%X", sha256.Sum256(cert)) == googlePlayKeySHA256
+}
 
 // googleRefPackages are compared against, smallest first, since each one is
 // copied off the tablet to read its certificate.
@@ -54,6 +64,10 @@ func (s *Server) tabletCert(serial, pkg string) ([]byte, error) {
 // checkGoogleSigned compares cert with the tablet's own Google apps.
 // Caller holds s.mu.
 func (s *Server) checkGoogleSigned(serial string, cert []byte) error {
+	if isGooglePlayKey(cert) {
+		s.log.add("Play Store file is signed with Google's Play Store key (%s)", certFingerprint(cert))
+		return nil
+	}
 	var tried []string
 	for _, pkg := range googleRefPackages {
 		ref, err := s.tabletCert(serial, pkg)
@@ -67,11 +81,8 @@ func (s *Server) checkGoogleSigned(serial string, cert []byte) error {
 		}
 		tried = append(tried, certFingerprint(ref))
 	}
-	if len(tried) == 0 {
-		return fmt.Errorf("couldn't read the Google apps on the tablet to compare with")
-	}
-	s.log.add("Play Store file key %s doesn't match the tablet's Google apps (%s)", certFingerprint(cert), strings.Join(tried, ", "))
-	return fmt.Errorf("this file isn't signed by Google with the same key as the Google apps on your tablet, so it wasn't installed. Download the Play Store again from a source you trust")
+	s.log.add("Play Store file key %s isn't Google's Play Store key or the tablet's Google key (%s)", certFingerprint(cert), strings.Join(tried, ", "))
+	return fmt.Errorf("this file isn't signed by Google, so it wasn't installed. Download the Play Store again from a source you trust")
 }
 
 func (s *Server) handleInstallPlay(w http.ResponseWriter, r *http.Request) {

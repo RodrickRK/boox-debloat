@@ -42,7 +42,7 @@
         <p id="playText"></p>
         <button type="button" class="outline-button" id="enablePlay" hidden>Turn on Google Play</button>
         <div class="play-install" id="playInstall" hidden>
-          <p class="play-help">This firmware doesn't include the Play Store. Download Google's Play Store APK (the <strong>nodpi</strong> version), for example from <a href="https://www.apkmirror.com/apk/google-inc/google-play-store/" target="_blank" rel="noopener noreferrer">APKMirror</a>, then choose it here. The app only installs it if it's signed by Google with the same key as the Google apps on your tablet.</p>
+          <p class="play-help">This firmware doesn't include the Play Store. Download Google's Play Store APK (the <strong>nodpi</strong> version), for example from <a href="https://www.apkmirror.com/apk/google-inc/google-play-store/" target="_blank" rel="noopener noreferrer">APKMirror</a>, then choose it here. The app only installs it if it's signed by Google. If APKPure offers an XAPK, pick a plain APK instead.</p>
           <label class="file-button">
             <input type="file" id="playInput" accept=".apk,application/vnd.android.package-archive">
             <span>Install Play Store</span>
@@ -78,6 +78,7 @@
       </nav>
 
       <footer class="credit">
+        <p class="app-version" id="appVersion" hidden></p>
         <p>Created by <a class="tekki" href="https://www.tekki.studio" target="_blank" rel="noopener noreferrer">tekki</a></p>
         <a class="coffee" href="https://buymeacoffee.com/tekki.studio" target="_blank" rel="noopener noreferrer">
           <img src="bmc-logo.svg" alt="" width="14" height="20">

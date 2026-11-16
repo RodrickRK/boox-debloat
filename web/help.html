@@ -101,7 +101,7 @@
 
   <section id="play">
     <h2>Google Play</h2>
-    <p>If the left panel says <strong>Google Play: Play Store missing</strong>, your firmware came without the Play Store. Download Google's Play Store APK (the <strong>nodpi</strong> version), for example from <a href="https://www.apkmirror.com/apk/google-inc/google-play-store/" target="_blank" rel="noopener noreferrer">APKMirror</a>, and choose it with <strong>Install Play Store</strong>. The app only installs it if it's signed by Google with the same key as the Google apps on your tablet.</p>
+    <p>If the left panel says <strong>Google Play: Play Store missing</strong>, your firmware came without the Play Store. Download Google's Play Store APK (the <strong>nodpi</strong> version), for example from <a href="https://www.apkmirror.com/apk/google-inc/google-play-store/" target="_blank" rel="noopener noreferrer">APKMirror</a>, and choose it with <strong>Install Play Store</strong>. The app only installs it if it's signed by Google's Play Store key, or by the same key as the Google apps on your tablet. Choose a plain <code>.apk</code>, not an XAPK bundle.</p>
     <p>If it says <strong>Google Play: off</strong>, press <strong>Turn on Google Play</strong>, then restart the tablet. It only turns on the parts that are off.</p>
     <p>The Star Education firmware isn't certified by Google, so Play Store may say <strong>This device isn't Play Protect certified</strong>. Debloating doesn't cause it: the app never removes Google Play, Play services or Google Services Framework.</p>
     <ol class="steps">
@@ -114,6 +114,8 @@
       <li>On the tablet, open <strong>Settings</strong>, then <strong>Apps</strong>. For <strong>Google Play Store</strong> and <strong>Google Play services</strong>, tap <strong>Force stop</strong>, then open <strong>Storage</strong> and tap <strong>Clear data</strong>.</li>
       <li>Restart the tablet, open Play Store and sign in again.</li>
     </ol>
+    <h3>Turn off Play Protect scanning</h3>
+    <p>Once Play Store works, Play Protect may warn about or block apps you install yourself, like Aurora Store or KOReader. To stop that: open <strong>Play Store</strong>, tap your profile picture, then <strong>Play Protect</strong>, then the settings (gear) icon, and turn off <strong>Scan apps with Play Protect</strong>. You can turn it back on the same way.</p>
     <p>Clearing Play services' data signs you out of Google on the tablet. A factory reset or firmware update gives the tablet a new GSF ID, so register again after one.</p>
   </section>
 

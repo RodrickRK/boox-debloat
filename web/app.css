@@ -601,6 +601,7 @@ button.file-name::before { border-top-width: 3px; }
 }
 
 .credit a { color: var(--ink); text-underline-offset: 3px; }
+.credit .app-version { flex-basis: 100%; margin: 0; }
 
 /* The studio name in its own typeface. */
 .credit .tekki {
@@ -747,6 +748,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 }
 
 .help-page section > p, .help-page .steps { max-width: 66ch; }
+.help-page h3 { font-family: var(--serif); font-weight: 600; font-size: var(--s0); margin: 8px 0 0; }
 
 .help-page code {
   font-family: ui-monospace, "SF Mono", Consolas, monospace;

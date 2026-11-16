@@ -174,7 +174,17 @@ function renderMessage(status) {
     el("p", { class: "row-why" }, "Stuck? Read the ", el("a", { href: "help.html", target: "_blank", rel: "noopener" }, "help and FAQ"), "."));
 }
 
+// Show which build is running, so two copies can't be mixed up.
+function renderVersion(status) {
+  if (!status.version) return;
+  const label = status.version === "dev" ? "Development build" : "Version " + status.version;
+  $("appVersion").textContent = label;
+  $("appVersion").hidden = false;
+  document.title = status.version === "dev" ? "Boox Debloat (dev)" : `Boox Debloat ${status.version}`;
+}
+
 function renderDevice(status) {
+  renderVersion(status);
   show("demo", status.demo);
   const connected = token && status.adb && status.state === "device";
   renderConnection(status, connected);
@@ -744,7 +754,7 @@ $("playInput").addEventListener("change", async (e) => {
       setStatus("playMsg", f < 1 ? `Sending ${file.name}… ${Math.round(f * 100)}%` : "Checking it's signed by Google, then installing…");
     });
     flash();
-    setStatus("playMsg", "Play Store is installed. Open it on the tablet and sign in.", "good");
+    setStatus("playMsg", "Play Store is installed. Open it on the tablet and sign in. To stop Play Protect blocking apps you install yourself, turn off Scan apps with Play Protect (Play Store, profile picture, Play Protect, settings).", "good");
   } catch (err) {
     setStatus("playMsg", err.message, "bad");
   } finally {

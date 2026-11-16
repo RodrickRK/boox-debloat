@@ -130,7 +130,9 @@ Set it from the **file browser**. The hidden Wallpaper Settings page crashes on 
 
 The left panel shows the state of Google Play:
 
-- **Play Store missing.** The C69 M Star's Star Education firmware comes with Google Play services but no Play Store. Download Google's Play Store APK (the **nodpi** version), for example from [APKMirror](https://www.apkmirror.com/apk/google-inc/google-play-store/), and choose it with **Install Play Store**. The app reads the file's manifest and signing certificate and only installs it if it's `com.android.vending`, signed with the same Google key as the Google apps that came on your tablet. Anything else is refused.
+- **Play Store missing.** The C69 M Star's Star Education firmware comes with Google Play services but no Play Store. Download Google's Play Store APK (the **nodpi** version), for example from [APKMirror](https://www.apkmirror.com/apk/google-inc/google-play-store/), and choose it with **Install Play Store**. The app reads the file's manifest and signing certificate and only installs it if it's `com.android.vending` and signed by Google: either with Google's Play Store key (SHA-1 `38:91:8A:45:3D:07:19:93:54:F8:B1:9A:F0:5E:C6:56:2C:ED:57:88`) or with the same key as the Google apps that came on your tablet. Anything else is refused. Choose a plain `.apk`, not an XAPK bundle.
+
+  The tablet's own Google apps are signed with a different Google key from the Play Store, so if Play Store won't sign in after installing, uninstall it from **Apps** and use **Aurora Store** instead.
 - **Off.** Press **Turn on Google Play**: it turns on Google Play Store, Google Play services and Google Services Framework, skipping any that are already on, and saves a backup first. Restart the tablet when it asks.
 - **On.** Nothing to do.
 
@@ -164,6 +166,16 @@ adb reboot
 Clearing Play services' data signs you out of Google on the tablet; sign in again after the restart.
 
 A factory reset or firmware update gives the tablet a new GSF ID. Register the new one the same way.
+
+#### Turn off Play Protect scanning
+
+Once Play Store works, Play Protect may warn about or block apps you install yourself, like Aurora Store, KOReader or Boox Debloat's recommended apps, and it can be slow on this tablet. To turn its scanning off:
+
+1. Open **Play Store** and tap your profile picture at the top right.
+2. Tap **Play Protect**, then the settings (gear) icon at the top right.
+3. Turn off **Scan apps with Play Protect**, and **Improve harmful app detection** if it's there.
+
+You can turn it back on the same way. Google may not show these switches on every Play Store version.
 
 If Play Store installs an app but the app closes straight away with a licence error, the app uses Google's licence check, which can fail on uncertified firmware. Install it from [Aurora Store](https://f-droid.org/packages/com.aurora.store/) or the developer's own site instead.
 

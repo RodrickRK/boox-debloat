@@ -96,3 +96,9 @@ func TestAPKPackageNameAndUnsigned(t *testing.T) {
 		t.Fatal("an unsigned APK should be rejected")
 	}
 }
+
+func TestGooglePlayKeyRejectsOthers(t *testing.T) {
+	if isGooglePlayKey(nil) || isGooglePlayKey([]byte("not a cert")) {
+		t.Fatal("only Google's Play Store certificate should match")
+	}
+}
