@@ -459,11 +459,38 @@ function dropTarget(zone, mark, onFiles) {
   zone.addEventListener("dragleave", (e) => {
     if (!zone.contains(e.relatedTarget)) mark.classList.remove("dragging");
   });
-  zone.addEventListener("drop", (e) => {
+  zone.addEventListener("drop", async (e) => {
     e.preventDefault();
     mark.classList.remove("dragging");
+    // Entries must be taken before the first await, while the drop is live.
+    const entries = [...e.dataTransfer.items]
+      .map((it) => (it.kind === "file" && it.webkitGetAsEntry ? it.webkitGetAsEntry() : null));
+    if (entries.some((en) => en && en.isDirectory)) {
+      const files = [];
+      for (const en of entries) if (en) await collectEntry(en, "", files);
+      if (files.length) onFiles(files);
+      return;
+    }
     if (e.dataTransfer.files.length) onFiles([...e.dataTransfer.files]);
   });
+}
+
+// Walks a dropped file or folder, adding each file with `rel` set to its
+// path inside the drop ("Folder/sub/file.txt").
+async function collectEntry(entry, prefix, out) {
+  const rel = prefix + entry.name;
+  if (entry.isFile) {
+    const file = await new Promise((res, rej) => entry.file(res, rej));
+    file.rel = rel;
+    out.push(file);
+    return;
+  }
+  const reader = entry.createReader();
+  for (;;) {
+    const batch = await new Promise((res, rej) => reader.readEntries(res, rej));
+    if (!batch.length) break;
+    for (const child of batch) await collectEntry(child, rel + "/", out);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -559,19 +586,50 @@ async function removeFile(path, entry) {
   }
 }
 
+// Splits files into requests of at most 200 files or 256 MB, so a big
+// folder stays under the server's per-request limits.
+function uploadBatches(files) {
+  const batches = [];
+  let cur = [], bytes = 0;
+  for (const f of files) {
+    if (cur.length && (cur.length >= 200 || bytes + f.size > 256 << 20)) {
+      batches.push(cur);
+      cur = [];
+      bytes = 0;
+    }
+    cur.push(f);
+    bytes += f.size;
+  }
+  if (cur.length) batches.push(cur);
+  return batches;
+}
+
 async function uploadFiles(files) {
   if (!files.length || !supportedNow()) return;
   const total = files.reduce((n, f) => n + f.size, 0);
-  const label = files.length === 1 ? files[0].name : `${files.length} files`;
-  const form = new FormData();
-  form.append("path", state.path);
-  for (const f of files) form.append("files", f);
+  const rel = (f) => f.rel || f.webkitRelativePath || "";
+  const top = new Set(files.map((f) => rel(f).split("/")[0]).filter(Boolean));
+  const label = top.size === 1 && rel(files[0]).includes("/")
+    ? `${[...top][0]} (${files.length} file${files.length === 1 ? "" : "s"})`
+    : files.length === 1 ? files[0].name : `${files.length} files`;
   state.busy = true;
   setStatus("filesStatus", `Sending ${label} (${formatSize(total)})…`);
   try {
-    await upload("upload", form, (f) => {
-      setStatus("filesStatus", f < 1 ? `Sending ${label}… ${Math.round(f * 100)}%` : `Copying ${label} to the tablet…`);
-    });
+    let sent = 0;
+    for (const batch of uploadBatches(files)) {
+      const form = new FormData();
+      form.append("path", state.path);
+      for (const f of batch) {
+        form.append("files", f);
+        form.append("rel", rel(f));
+      }
+      const size = batch.reduce((n, f) => n + f.size, 0);
+      await upload("upload", form, (f) => {
+        const pct = total ? Math.round(((sent + f * size) / total) * 100) : 100;
+        setStatus("filesStatus", pct < 100 ? `Sending ${label}… ${pct}%` : `Copying ${label} to the tablet…`);
+      });
+      sent += size;
+    }
     flash();
     setStatus("filesStatus", `Copied ${label} to ${state.path.replace("/sdcard", "Storage").split("/").join(" / ")}.`, "good");
   } catch (err) {
@@ -579,11 +637,13 @@ async function uploadFiles(files) {
   } finally {
     state.busy = false;
     $("uploadInput").value = "";
+    $("uploadFolderInput").value = "";
     await loadFiles(state.path);
   }
 }
 
 $("uploadInput").addEventListener("change", (e) => uploadFiles([...e.target.files]));
+$("uploadFolderInput").addEventListener("change", (e) => uploadFiles([...e.target.files]));
 dropTarget($("filesView"), $("filesList"), uploadFiles);
 
 // ---------------------------------------------------------------------------

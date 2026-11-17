@@ -284,6 +284,26 @@ func safeFileName(name string) (string, error) {
 	return name, nil
 }
 
+// safeRelPath checks a path inside an uploaded folder, such as
+// "simpleui.koplugin/main.lua": every part must be a usable file name.
+func safeRelPath(rel string) (string, error) {
+	parts := strings.Split(strings.ReplaceAll(rel, "\\", "/"), "/")
+	var keep []string
+	for _, p := range parts {
+		if p == "" {
+			continue
+		}
+		if p == "." || p == ".." || strings.ContainsAny(p, "\x00\n\r") {
+			return "", errors.New("that file name can't be used")
+		}
+		keep = append(keep, p)
+	}
+	if len(keep) == 0 {
+		return "", errors.New("that file name can't be used")
+	}
+	return strings.Join(keep, "/"), nil
+}
+
 type fileEntry struct {
 	Name     string `json:"name"`
 	Dir      bool   `json:"dir"`
@@ -389,6 +409,7 @@ const maxUploadBytes = 2 << 30
 func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes)
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		s.log.add("upload: %v", err)
 		writeErr(w, http.StatusBadRequest, "Those files are too big (2 GB at most), or the upload stopped.")
 		return
 	}
@@ -403,6 +424,9 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "No files were sent.")
 		return
 	}
+	// "rel" holds each file's path inside a dropped folder ("Book/ch1.txt"),
+	// in the same order as the files. Plain files send just their name.
+	rels := r.MultipartForm.Value["rel"]
 	type saved struct{ local, name string }
 	var list []saved
 	defer func() {
@@ -410,8 +434,14 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 			os.Remove(f.local)
 		}
 	}()
-	for _, fh := range files {
-		name, err := safeFileName(fh.Filename)
+	for i, fh := range files {
+		var name string
+		var err error
+		if i < len(rels) && rels[i] != "" {
+			name, err = safeRelPath(rels[i])
+		} else {
+			name, err = safeFileName(fh.Filename)
+		}
 		if err != nil {
 			writeErr(w, http.StatusBadRequest, fmt.Sprintf("%q: %v", fh.Filename, err))
 			return
@@ -433,6 +463,9 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	var done []string
 	for _, f := range list {
 		remote := dir + "/" + f.name
+		if sub := path.Dir(remote); sub != dir {
+			s.be.Shell(dev.Serial, "mkdir -p -- "+quote(sub))
+		}
 		if err := s.be.Push(dev.Serial, f.local, remote); err != nil {
 			writeErr(w, http.StatusBadGateway, fmt.Sprintf("Couldn't copy %s to the tablet: %s", f.name, oneLine(err.Error(), 200)))
 			return

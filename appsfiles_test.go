@@ -132,3 +132,23 @@ func TestDemoFiles(t *testing.T) {
 		t.Fatal("should refuse a non-empty folder")
 	}
 }
+
+func TestSafeRelPath(t *testing.T) {
+	good := map[string]string{
+		"a.txt":                      "a.txt",
+		"simpleui.koplugin/main.lua": "simpleui.koplugin/main.lua",
+		"Folder//sub/x.png":          "Folder/sub/x.png",
+		`Win\sub\file.txt`:           "Win/sub/file.txt",
+	}
+	for in, want := range good {
+		got, err := safeRelPath(in)
+		if err != nil || got != want {
+			t.Errorf("safeRelPath(%q) = %q, %v; want %q", in, got, err, want)
+		}
+	}
+	for _, in := range []string{"", "/", "../x", "a/../../b", "a/./b", "a\nb"} {
+		if got, err := safeRelPath(in); err == nil {
+			t.Errorf("safeRelPath(%q) = %q, want error", in, got)
+		}
+	}
+}

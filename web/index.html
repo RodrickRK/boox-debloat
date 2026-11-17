@@ -154,8 +154,12 @@
             <input type="file" id="uploadInput" multiple>
             <span>Upload files</span>
           </label>
+          <label class="file-button small">
+            <input type="file" id="uploadFolderInput" webkitdirectory>
+            <span>Upload folder</span>
+          </label>
         </div>
-        <p class="group-note">Drop files anywhere on this list to copy them into this folder.</p>
+        <p class="group-note">Drop files or folders anywhere on this list to copy them into this folder.</p>
         <p class="status-line" id="filesStatus" role="status" hidden></p>
         <ul class="rows files" id="filesList"></ul>
       </section>
