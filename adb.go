@@ -30,6 +30,8 @@ type Backend interface {
 	Connect(addr string) (string, error)
 	TCPIP(serial string, port int) (string, error)
 	MdnsServices() (string, error)
+	// RestartServer stops and starts adb's background server.
+	RestartServer() error
 }
 
 // Copying big files and installing apps can take a while.
@@ -178,6 +180,12 @@ func (a *adbBackend) TCPIP(serial string, port int) (string, error) {
 
 func (a *adbBackend) MdnsServices() (string, error) {
 	return a.run(10*time.Second, "mdns", "services")
+}
+
+func (a *adbBackend) RestartServer() error {
+	a.run(10*time.Second, "kill-server") // fine if none was running
+	_, err := a.run(30*time.Second, "start-server")
+	return err
 }
 
 // ---------------------------------------------------------------------------
@@ -456,6 +464,8 @@ func (d *demoBackend) Connect(addr string) (string, error) {
 func (d *demoBackend) TCPIP(serial string, port int) (string, error) {
 	return "restarting in TCP mode port: " + strconv.Itoa(port) + "\n", nil
 }
+
+func (d *demoBackend) RestartServer() error { return nil }
 
 func (d *demoBackend) MdnsServices() (string, error) {
 	return "List of discovered mdns services\nadb-DEMO-C69\t_adb-tls-pairing._tcp\t192.168.1.42:37145\n", nil

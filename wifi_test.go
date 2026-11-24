@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -139,7 +140,15 @@ func call(s *Server, method, path, body string) *httptest.ResponseRecorder {
 	return rec
 }
 
+// reachable makes the network check pass for the test's made-up addresses.
+func reachable(t *testing.T) {
+	old := reach
+	reach = func(string) error { return nil }
+	t.Cleanup(func() { reach = old })
+}
+
 func TestWifiEndpoints(t *testing.T) {
+	reachable(t)
 	s := testServer(t, newDemoBackend(testCatalog(t)))
 
 	if rec := call(s, http.MethodPost, "/api/wifi/pair", `{"addr":"192.168.1.42:37145","code":"123456"}`); rec.Code != http.StatusOK {
@@ -172,5 +181,70 @@ func TestWifiSwitch(t *testing.T) {
 	}
 	if len(be.connected) != 1 || be.connected[0] != "192.168.1.20:5555" {
 		t.Fatalf("connected to %v", be.connected)
+	}
+}
+
+// flakyPair fails pairing until adb's server is restarted, like a stale
+// server the Mac won't let reach local devices.
+type flakyPair struct {
+	*demoBackend
+	restarted bool
+	pairs     int
+	devices   []DeviceEntry
+	mdns      string
+}
+
+func (b *flakyPair) Devices() ([]DeviceEntry, error) { return b.devices, nil }
+func (b *flakyPair) RestartServer() error            { b.restarted = true; return nil }
+func (b *flakyPair) MdnsServices() (string, error)   { return b.mdns, nil }
+func (b *flakyPair) Pair(addr, code string) (string, error) {
+	b.pairs++
+	if !b.restarted {
+		return "error: protocol fault (couldn't read status message): Undefined error: 0\n", errors.New("exit status 1")
+	}
+	return "Successfully paired to " + addr + "\n", nil
+}
+
+func TestPairRestartsStaleServerAndConnects(t *testing.T) {
+	reachable(t)
+	be := &flakyPair{
+		demoBackend: newDemoBackend(testCatalog(t)),
+		mdns:        "adb-X\t_adb-tls-connect._tcp\t192.168.29.101:44157\n",
+	}
+	s := testServer(t, be)
+	rec := call(s, http.MethodPost, "/api/wifi/pair", `{"addr":"192.168.29.101 : 37921","code":"739 313"}`)
+	if rec.Code != http.StatusOK || !be.restarted || be.pairs != 2 {
+		t.Fatalf("got %d %s, restarted=%v pairs=%d", rec.Code, rec.Body, be.restarted, be.pairs)
+	}
+	if !strings.Contains(rec.Body.String(), `"connected":"192.168.29.101:44157"`) {
+		t.Fatalf("should connect to the announced address: %s", rec.Body)
+	}
+}
+
+func TestPairKeepsConnectedDevices(t *testing.T) {
+	reachable(t)
+	be := &flakyPair{
+		demoBackend: newDemoBackend(testCatalog(t)),
+		devices:     []DeviceEntry{{"USB123", "device"}},
+	}
+	s := testServer(t, be)
+	if rec := call(s, http.MethodPost, "/api/wifi/pair", `{"addr":"192.168.29.101:37921","code":"739313"}`); rec.Code != http.StatusBadGateway {
+		t.Fatalf("got %d", rec.Code)
+	}
+	if be.restarted {
+		t.Fatal("must not restart adb's server while a device is connected")
+	}
+}
+
+func TestPairUnreachable(t *testing.T) {
+	old := reach
+	reach = func(string) error { return errors.New("dial tcp 192.168.29.101:37921: connect: no route to host") }
+	t.Cleanup(func() { reach = old })
+	be := &flakyPair{demoBackend: newDemoBackend(testCatalog(t))}
+	s := testServer(t, be)
+	rec := call(s, http.MethodPost, "/api/wifi/pair", `{"addr":"192.168.29.101:37921","code":"739313"}`)
+	// adb is always tried first; the network check only explains the failure.
+	if rec.Code != http.StatusBadGateway || !strings.Contains(rec.Body.String(), "can't reach the tablet") || be.pairs != 1 || be.restarted {
+		t.Fatalf("got %d %s pairs=%d", rec.Code, rec.Body, be.pairs)
 	}
 }

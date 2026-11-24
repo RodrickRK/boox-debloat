@@ -1161,6 +1161,9 @@ async function scanWifi() {
 }
 
 async function wifiSubmit(form, run) {
+  // One request per press: Enter or a second click while it runs does nothing.
+  if (form.dataset.busy) return;
+  form.dataset.busy = "1";
   const buttons = form.querySelectorAll("button");
   buttons.forEach((b) => { b.disabled = true; });
   try {
@@ -1169,6 +1172,7 @@ async function wifiSubmit(form, run) {
     wifiMessage(err.message, true);
   } finally {
     buttons.forEach((b) => { b.disabled = false; });
+    delete form.dataset.busy;
   }
 }
 
