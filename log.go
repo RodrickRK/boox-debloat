@@ -138,6 +138,32 @@ func (b loggedBackend) Reboot(serial string) error {
 	return err
 }
 
+func (b loggedBackend) Pair(addr, code string) (string, error) {
+	out, err := b.Backend.Pair(addr, code) // the code isn't logged
+	b.logAnswer("adb pair "+addr, out, err)
+	return out, err
+}
+
+func (b loggedBackend) Connect(addr string) (string, error) {
+	out, err := b.Backend.Connect(addr)
+	b.logAnswer("adb connect "+addr, out, err)
+	return out, err
+}
+
+func (b loggedBackend) TCPIP(serial string, port int) (string, error) {
+	out, err := b.Backend.TCPIP(serial, port)
+	b.logAnswer(fmt.Sprintf("adb tcpip %d", port), out, err)
+	return out, err
+}
+
+func (b loggedBackend) logAnswer(what, out string, err error) {
+	answer := oneLine(out, 200)
+	if err != nil {
+		answer = strings.TrimSpace(answer + " (error: " + err.Error() + ")")
+	}
+	b.log.add("%s -> %s", what, answer)
+}
+
 // statusRecorder notes the status code and error text of API answers.
 type statusRecorder struct {
 	http.ResponseWriter

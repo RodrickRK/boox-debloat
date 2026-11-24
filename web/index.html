@@ -68,6 +68,8 @@
 
       <div class="restart" id="restartBox" hidden>
         <button type="button" class="outline-button" id="restartBtn">Restart tablet</button>
+        <button type="button" class="outline-button" id="wifiBtn" hidden>Switch to Wi-Fi</button>
+        <p class="wifi-note" id="wifiNote" hidden></p>
       </div>
 
       <nav class="help-links" aria-label="Help">
@@ -91,6 +93,46 @@
   <main id="main">
     <section class="message" id="message" hidden></section>
 
+    <section class="wifi" id="wifi" hidden>
+      <h2>Or connect over Wi-Fi</h2>
+      <p>The tablet and this computer must be on the same Wi-Fi network.</p>
+
+      <h3>Easiest: start with USB</h3>
+      <p>Connect once with the cable, press <strong>Switch to Wi-Fi</strong> under the tablet's name, then unplug. This lasts until the tablet restarts.</p>
+
+      <h3>Without a cable: wireless debugging</h3>
+      <p class="row-why">Needs Android 11 or newer, and a firmware that shows Developer options. If yours doesn't, use the USB way above.</p>
+      <details class="wifi-how">
+        <summary>How to turn on wireless debugging</summary>
+        <ol class="steps">
+          <li>Join the same Wi-Fi network on the tablet and on this computer.</li>
+          <li>Turn on Developer options: open <strong>Settings</strong>, then <strong>About tablet</strong>, and tap <strong>Build number</strong> seven times until it says you're a developer. On some Boox firmware it's the version number instead.</li>
+          <li>Open <strong>Developer options</strong>. It's usually under <strong>Settings &rsaquo; System</strong>, or search Settings for "developer".</li>
+          <li>Turn on <strong>Wireless debugging</strong> and tap <strong>Allow</strong> for this network.</li>
+          <li>Tap the words <strong>Wireless debugging</strong> (not the switch) to open its screen. It shows the <strong>IP address &amp; Port</strong> and a <strong>Pair device with pairing code</strong> button.</li>
+        </ol>
+        <p class="row-why">Wireless debugging turns itself off when the tablet restarts or changes network, and gets a new port each time. You only need to pair once per computer. Can't find Developer options? Use the USB way above.</p>
+      </details>
+      <ol class="steps">
+        <li>On the tablet, turn on <strong>Wireless debugging</strong> (see above) and open its screen.</li>
+        <li>Tap <strong>Pair device with pairing code</strong>, keep that window open, and type the address and code it shows:</li>
+      </ol>
+      <form class="wifi-form" id="pairForm">
+        <label>Pairing address <input type="text" id="pairAddr" placeholder="192.168.1.20:37145" autocomplete="off" spellcheck="false" inputmode="url"></label>
+        <label>Code <input type="text" id="pairCode" placeholder="123456" autocomplete="off" inputmode="numeric" maxlength="7" class="code"></label>
+        <button type="submit" class="button">Pair</button>
+      </form>
+      <ol class="steps" start="3">
+        <li>Usually the tablet connects by itself after pairing. If not, type the <strong>IP address &amp; Port</strong> from the Wireless debugging screen (not the pairing one):</li>
+      </ol>
+      <form class="wifi-form" id="connectForm">
+        <label>Address <input type="text" id="connectAddr" placeholder="192.168.1.20:41027" autocomplete="off" spellcheck="false" inputmode="url"></label>
+        <button type="submit" class="outline-button">Connect</button>
+      </form>
+      <p class="wifi-found" id="wifiFound" hidden></p>
+      <p class="wifi-msg" id="wifiMsg" role="status" hidden></p>
+    </section>
+
     <p class="unsupported" id="unsupported" hidden></p>
 
     <div id="lists" hidden>
@@ -109,9 +151,19 @@
           <ul class="rows" id="disableList"></ul>
         </section>
 
+        <section class="group" id="googleGroup">
+          <div class="group-head">
+            <h2>Google</h2>
+            <button type="button" class="text-button" id="googleBack" hidden>Bring Google back</button>
+          </div>
+          <p class="group-note">De-Google removes these from the tablet. Play services and the framework keep their data, so your GSF ID stays registered if Google comes back. Apps that rely on Google services may stop working.</p>
+          <ul class="rows" id="googleList"></ul>
+          <button type="button" class="outline-button danger-button" id="degoogle">De-Google…</button>
+        </section>
+
         <section class="group">
           <div class="group-head"><h2>Always kept</h2></div>
-          <p class="group-note">The sleep screen, updates and Google Play need these. The tool never removes them.</p>
+          <p class="group-note">The sleep screen and updates need these. The tool never removes them, or anything else the tablet needs to work.</p>
           <ul class="rows" id="protectedList"></ul>
         </section>
       </div>

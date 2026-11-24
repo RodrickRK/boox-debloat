@@ -6,13 +6,14 @@ A small app for the **Onyx Boox C69 M Star** (Star Education edition). It remove
 
 It also installs apps from APK files, suggests e-ink friendly apps, and lets you browse, copy and delete files on the tablet.
 
-It runs on your computer, opens in your browser, and talks to the tablet over USB.
+It runs on your computer, opens in your browser, and talks to the tablet over USB or Wi-Fi.
 
 ## What it changes
 
 - **Removes 20 apps** the tablet doesn't need: emergency alerts (no SIM), factory test tools, Onyx Mail, print services and Qualcomm mobile-network extras. The full list is in [`apps.json`](apps.json).
 - **Turns off NFC** without removing it.
-- **Never touches** the apps the sleep screen, updates and Google Play rely on. That includes **Onyx sync (ksync)**: older debloat guides removed it, which makes setting a sleep picture hang on "Processing…" or fail.
+- **De-Googles the tablet if you want**, with a 10-second confirm and a way back. See [De-Google](#de-google).
+- **Never touches** the apps the sleep screen, updates and the system rely on. That includes **Onyx sync (ksync)**: older debloat guides removed it, which makes setting a sleep picture hang on "Processing…" or fail.
 
 Apps are removed with `pm uninstall --user 0`, which only hides them from your user. Nothing is deleted from the tablet, and every app can be switched back on.
 
@@ -80,6 +81,26 @@ The app can only reach the tablet with USB debugging on.
 3. Connect the tablet to your computer with a USB cable that carries data.
 4. When the tablet asks **"Allow USB debugging?"**, tap **Allow** and tick **Always allow from this computer**.
 
+### Use Wi-Fi instead of the cable (optional)
+
+The tablet and your computer must be on the same Wi-Fi network.
+
+- **Start with USB (works on any firmware).** Connect with the cable as above, press **Switch to Wi-Fi** in the left panel, then unplug. This lasts until the tablet restarts; after a restart, plug in and switch again.
+- **No cable: wireless debugging (Android 11 and newer).** Only works if your firmware shows **Developer options**. Turn on **Wireless debugging** there and tap **Pair device with pairing code**. In the app, type the pairing address and 6-digit code under **Or connect over Wi-Fi** and press **Pair**. The tablet usually connects by itself; if not, type the **IP address & Port** from the Wireless debugging screen and press **Connect**. The app also lists tablets it finds on your network, so you can tap one instead of typing.
+
+
+**How to turn on wireless debugging:**
+
+1. Join the same Wi-Fi network on the tablet and on your computer.
+2. Turn on Developer options: open **Settings**, then **About tablet**, and tap **Build number** seven times until it says you're a developer. On some Boox firmware it's the version number instead.
+3. Open **Developer options**. It's usually under **Settings › System**, or search Settings for "developer".
+4. Turn on **Wireless debugging** and tap **Allow** for this network.
+5. Tap the words **Wireless debugging** (not the switch) to open its screen. It shows the **IP address & Port** and a **Pair device with pairing code** button.
+
+Wireless debugging turns itself off when the tablet restarts or changes network, and gets a new port each time. You only need to pair once per computer. If your firmware has no Developer options, use the USB way.
+
+Over Wi-Fi, installing big apps takes longer, and restarting the tablet drops the connection.
+
 ## 3. Open the app
 
 In Terminal (Mac), PowerShell (Windows) or a terminal (Linux), run:
@@ -136,7 +157,7 @@ The left panel shows the state of Google Play:
 - **Off.** Press **Turn on Google Play**: it turns on Google Play Store, Google Play services and Google Services Framework, skipping any that are already on, and saves a backup first. Restart the tablet when it asks.
 - **On.** Nothing to do.
 
-The Star Education firmware isn't certified by Google, so Play Store may say **"This device isn't Play Protect certified"** or refuse to sign in. Boox Debloat never removes Google Play, Play Services or Google Services Framework, so this isn't caused by debloating. To fix it, register the tablet with Google:
+The Star Education firmware isn't certified by Google, so Play Store may say **"This device isn't Play Protect certified"** or refuse to sign in. Debloating never removes Google Play, Play Services or Google Services Framework (only **De-Google** does, when you ask), so this isn't caused by debloating. To fix it, register the tablet with Google:
 
 1. Sign in to a Google account on the tablet (Settings, then Accounts), or at least open Play Store once.
 2. With the tablet connected and USB debugging on, get its Google Services Framework (GSF) ID:
@@ -178,6 +199,20 @@ Once Play Store works, Play Protect may warn about or block apps you install you
 You can turn it back on the same way. Google may not show these switches on every Play Store version.
 
 If Play Store installs an app but the app closes straight away with a licence error, the app uses Google's licence check, which can fail on uncertified firmware. Install it from [Aurora Store](https://f-droid.org/packages/com.aurora.store/) or the developer's own site instead.
+
+### De-Google
+
+The **Google** group in the Debloat list holds Google Play Store, Google Play services, Google Services Framework, and the small Google apps the Play Store installs by itself (SafetyCore, Key Verifier, Google verifier).
+
+**De-Google…** removes them for your user. The three main ones always go together; switch on **Keep** next to any of the small ones you want to keep. Before anything happens, a dialog lists what will be removed, suggests alternatives, and keeps the **De-Google** button greyed out for 10 seconds. A backup of your app list is saved first.
+
+- **Apps that rely on Google services may not work** after this: Play Store apps that need Google to run, push notifications, Sign in with Google, and some banking, streaming and messaging apps.
+- **Your Google account is signed out.** Android removes it from the tablet once Play services is gone. Sign in again after bringing Google back.
+- **Alternatives** that work without Google: [Aurora Store](https://f-droid.org/packages/com.aurora.store/) (free apps from Google Play, no account needed), [F-Droid](https://f-droid.org/) and [Obtainium](https://github.com/ImranR98/Obtainium/releases/latest).
+- **Play services and the framework keep their data** (`pm uninstall -k --user 0`), so the GSF ID you registered with Google survives. The Play Store and the small apps don't, so any Play Store APK can go back on.
+- **Undo it** with **Bring Google back** in the Google group, or **Turn on Google Play** in the left panel. Play services and the framework come straight back. The Play Store on the C69 was installed after the firmware, so removing it deletes its files: install it again with **Install Play Store**. Restart the tablet and sign in to Google again. The small Google apps come back when the Play Store reinstalls them.
+- **Restore all apps** doesn't bring Google back; it has its own button.
+- The app never removes anything the tablet needs to work, like WebView, the permission controller, the package installer or the keyboard, whatever you choose.
 
 ### Try it without a tablet
 
@@ -252,6 +287,8 @@ On a Mac, the first run may say the app is from an unidentified developer. Right
 To report a problem, choose **Copy logs** in the left panel, then paste them into [a new issue](https://github.com/RodrickRK/boox-debloat/issues/new) with what you tried. The logs only cover this run of the app. They show just the last four characters of the tablet's serial number and hide your user folder.
 
 - **"Plug in your tablet" doesn't go away.** Check that USB Debug Mode is on and the cable carries data, then press **Refresh**. Run `adb devices` to see whether your computer can see the tablet.
+- **Wi-Fi won't connect.** Check that the tablet and computer are on the same network, and that the port matches what the tablet shows now (wireless debugging picks a new port each time it's turned on). Some guest and office networks block devices from reaching each other.
+- **"More than one device connected".** Another Android device or emulator is connected. Disconnect it, or start the app with `boox-debloat -serial <serial>`. The same tablet over USB and Wi-Fi at once is fine.
 - **"Install Android platform tools".** adb is missing. Press **Download Android platform tools** on that screen, or [download it from Google](https://developer.android.com/tools/releases/platform-tools) and press **Refresh**.
 - **"Waiting for USB permission".** Unlock the tablet and tap **Allow** on the prompt.
 - **Linux: "Linux needs permission to use the tablet".** adb sees the tablet but can't open it. Install the USB permission package for your distro (Linux install, step 3), log out and back in, run `adb kill-server`, then replug the tablet.

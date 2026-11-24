@@ -24,6 +24,12 @@ type Backend interface {
 	Pull(serial, remote, local string) error
 	Install(serial, apk string) (string, error)
 	Reboot(serial string) error
+	// Wi-Fi: pair with a code, connect to an address, switch a USB
+	// connection to Wi-Fi, and list tablets adb found on the network.
+	Pair(addr, code string) (string, error)
+	Connect(addr string) (string, error)
+	TCPIP(serial string, port int) (string, error)
+	MdnsServices() (string, error)
 }
 
 // Copying big files and installing apps can take a while.
@@ -158,12 +164,29 @@ func (a *adbBackend) Reboot(serial string) error {
 	return err
 }
 
+func (a *adbBackend) Pair(addr, code string) (string, error) {
+	return a.run(30*time.Second, "pair", addr, code)
+}
+
+func (a *adbBackend) Connect(addr string) (string, error) {
+	return a.run(12*time.Second, "connect", addr)
+}
+
+func (a *adbBackend) TCPIP(serial string, port int) (string, error) {
+	return a.run(20*time.Second, "-s", serial, "tcpip", strconv.Itoa(port))
+}
+
+func (a *adbBackend) MdnsServices() (string, error) {
+	return a.run(10*time.Second, "mdns", "services")
+}
+
 // ---------------------------------------------------------------------------
 // Demo backend
 // ---------------------------------------------------------------------------
 
 type demoBackend struct {
 	state map[string]string   // package -> enabled | disabled | removed
+	added map[string]bool     // installed after the firmware: removing deletes the APK
 	user  map[string]string   // apps you installed: package -> version
 	files map[string][]string // folder -> "d name" or "f name size"
 }
@@ -171,6 +194,7 @@ type demoBackend struct {
 func newDemoBackend(c *Catalog) *demoBackend {
 	d := &demoBackend{
 		state: map[string]string{},
+		added: map[string]bool{playStorePkg: true},
 		user: map[string]string{
 			"org.koreader.launcher.fdroid": "2025.10",
 			"info.plateaukao.einkbro":      "14.2.0",
@@ -209,6 +233,14 @@ func newDemoBackend(c *Catalog) *demoBackend {
 		d.state[p] = "disabled"
 	}
 	delete(d.state, playStorePkg)
+	// Extras the Play Store installs by itself, so De-Google has
+	// something to show.
+	for _, a := range c.Google {
+		if !a.Core {
+			d.state[a.ID] = "enabled"
+			d.added[a.ID] = true
+		}
+	}
 	for _, p := range []string{"android", "com.android.settings", "com.android.systemui", "org.koreader.launcher"} {
 		d.state[p] = "enabled"
 	}
@@ -243,6 +275,30 @@ func (d *demoBackend) Shell(serial string, args ...string) (string, error) {
 			b.WriteString(p + " versionName=" + v + "\n")
 		}
 		return b.String(), nil
+	case strings.HasPrefix(cmd, "dumpsys account"):
+		return "1\n", nil
+	case cmd == "pm list packages -u -3":
+		var b strings.Builder
+		for p := range d.added {
+			if _, ok := d.state[p]; ok {
+				b.WriteString("package:" + p + "\n")
+			}
+		}
+		for p := range d.user {
+			b.WriteString("package:" + p + "\n")
+		}
+		return b.String(), nil
+	case strings.HasPrefix(cmd, "pm path "):
+		if s := d.state[last]; s == "enabled" || s == "disabled" {
+			return "package:/data/app/" + last + "/base.apk\n", nil
+		}
+		if _, ok := d.user[last]; ok {
+			return "package:/data/app/" + last + "/base.apk\n", nil
+		}
+		return "", errors.New("exit status 1")
+	case strings.HasPrefix(cmd, "pm uninstall -k --user 0 "):
+		d.state[last] = "removed"
+		return "Success\n", nil
 	case cmd == "pm list packages -3":
 		var b strings.Builder
 		for p := range d.user {
@@ -282,7 +338,11 @@ func (d *demoBackend) Shell(serial string, args ...string) (string, error) {
 		d.state[last] = "removed"
 		return "Success\n", nil
 	case strings.HasPrefix(cmd, "cmd package install-existing "):
-		d.state[last] = "enabled"
+		// Like Android: an app added after the firmware has no APK left
+		// to restore, yet the command still claims success.
+		if !d.added[last] {
+			d.state[last] = "enabled"
+		}
 		return "Package " + last + " installed for user: 0\n", nil
 	case strings.HasPrefix(cmd, "pm enable --user 0 "):
 		d.state[last] = "enabled"
@@ -382,3 +442,21 @@ func (d *demoBackend) remove(cmd string) (string, error) {
 }
 
 func (d *demoBackend) Reboot(serial string) error { return nil }
+
+func (d *demoBackend) Pair(addr, code string) (string, error) {
+	time.Sleep(300 * time.Millisecond)
+	return "Successfully paired to " + addr + " [guid=adb-DEMO]\n", nil
+}
+
+func (d *demoBackend) Connect(addr string) (string, error) {
+	time.Sleep(300 * time.Millisecond)
+	return "connected to " + addr + "\n", nil
+}
+
+func (d *demoBackend) TCPIP(serial string, port int) (string, error) {
+	return "restarting in TCP mode port: " + strconv.Itoa(port) + "\n", nil
+}
+
+func (d *demoBackend) MdnsServices() (string, error) {
+	return "List of discovered mdns services\nadb-DEMO-C69\t_adb-tls-pairing._tcp\t192.168.1.42:37145\n", nil
+}

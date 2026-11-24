@@ -88,7 +88,7 @@ func TestDemoApplyAndRestore(t *testing.T) {
 		{"com.android.nfc", actDisable},
 		{"com.onyx.android.ksync", actRestore},
 	} {
-		if r := applyChange(d, serial, ch); !r.OK {
+		if r := applyChange(d, c, serial, ch); !r.OK {
 			t.Fatalf("%v failed: %s", ch, r.Message)
 		}
 	}

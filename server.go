@@ -53,6 +53,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/apply", s.api(http.MethodPost, s.handleApply))
 	mux.HandleFunc("/api/restore-all", s.api(http.MethodPost, s.handleRestoreAll))
 	mux.HandleFunc("/api/enable-play", s.api(http.MethodPost, s.handleEnablePlay))
+	mux.HandleFunc("/api/degoogle", s.api(http.MethodPost, s.handleDegoogle))
 	mux.HandleFunc("/api/install-play", s.api(http.MethodPost, s.handleInstallPlay))
 	mux.HandleFunc("/api/reboot", s.api(http.MethodPost, s.handleReboot))
 	mux.HandleFunc("/api/picture", s.api(http.MethodPost, s.handlePicture))
@@ -66,6 +67,10 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/download", s.api(http.MethodGet, s.handleDownload))
 	mux.HandleFunc("/api/upload", s.api(http.MethodPost, s.handleUpload))
 	mux.HandleFunc("/api/delete", s.api(http.MethodPost, s.handleDelete))
+	mux.HandleFunc("/api/wifi/scan", s.api(http.MethodGet, s.handleWifiScan))
+	mux.HandleFunc("/api/wifi/pair", s.api(http.MethodPost, s.handleWifiPair))
+	mux.HandleFunc("/api/wifi/connect", s.api(http.MethodPost, s.handleWifiConnect))
+	mux.HandleFunc("/api/wifi/switch", s.api(http.MethodPost, s.handleWifiSwitch))
 	mux.HandleFunc("/api/ping", s.api(http.MethodPost, func(w http.ResponseWriter, r *http.Request) {
 		s.lastPing.Store(time.Now().Unix())
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
@@ -119,6 +124,7 @@ type statusResp struct {
 	Adb        bool   `json:"adb"`
 	State      string `json:"state"` // none, unauthorized, nopermission, offline, multiple, device
 	Serial     string `json:"serial,omitempty"`
+	Wifi       bool   `json:"wifi,omitempty"` // connected over Wi-Fi, not USB
 	Model      string `json:"model,omitempty"`
 	Firmware   string `json:"firmware,omitempty"`
 	Android    string `json:"android,omitempty"`
@@ -163,6 +169,10 @@ func (s *Server) pickDevice() (DeviceEntry, string, error) {
 	case 0:
 		return DeviceEntry{}, state, nil
 	default:
+		// The same tablet over USB and Wi-Fi at once isn't "multiple".
+		if d, ok := s.sameTablet(ready); ok {
+			return d, "device", nil
+		}
 		return DeviceEntry{}, "multiple", nil
 	}
 }
@@ -194,6 +204,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp.Serial = dev.Serial
+	resp.Wifi = isWifiSerial(dev.Serial)
 	resp.Model = s.prop(dev.Serial, "ro.product.model")
 	resp.Firmware = s.prop(dev.Serial, "ro.build.display.id")
 	resp.Android = s.prop(dev.Serial, "ro.build.version.release")
@@ -220,7 +231,11 @@ func (s *Server) noteConn(r statusResp) {
 	case !r.Adb:
 		s.log.add("adb isn't installed")
 	case r.State == "device":
-		s.log.add("Connected: %s, %s, Android %s, supported: %v", r.Model, r.Firmware, r.Android, r.Supported)
+		via := "USB"
+		if r.Wifi {
+			via = "Wi-Fi"
+		}
+		s.log.add("Connected over %s: %s, %s, Android %s, supported: %v", via, r.Model, r.Firmware, r.Android, r.Supported)
 	default:
 		s.log.add("Tablet: %s", r.State)
 	}
@@ -235,7 +250,7 @@ func (s *Server) readyDevice(w http.ResponseWriter, write bool) (DeviceEntry, bo
 		return dev, false
 	}
 	if state != "device" {
-		writeErr(w, http.StatusConflict, "The tablet isn't connected. Plug it in and try again.")
+		writeErr(w, http.StatusConflict, "The tablet isn't connected. Plug it in or connect it over Wi-Fi, then try again.")
 		return dev, false
 	}
 	if write {
@@ -260,6 +275,10 @@ type appsResp struct {
 	Remove    []appView `json:"remove"`
 	Disable   []appView `json:"disable"`
 	Protected []appView `json:"protected"`
+	Google    []appView `json:"google"`
+	// A Google account is signed in. Only a yes or no leaves the tablet,
+	// never the account name.
+	GoogleAccount bool `json:"googleAccount"`
 }
 
 func views(apps []App, states map[string]string) []appView {
@@ -283,9 +302,11 @@ func (s *Server) handleApps(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, appsResp{
-		Remove:    views(s.cat.Remove, states),
-		Disable:   views(s.cat.Disable, states),
-		Protected: views(s.cat.Protected, states),
+		Remove:        views(s.cat.Remove, states),
+		Disable:       views(s.cat.Disable, states),
+		Protected:     views(s.cat.Protected, states),
+		Google:        views(s.cat.Google, states),
+		GoogleAccount: s.googleAccount(dev.Serial),
 	})
 }
 
@@ -300,6 +321,12 @@ func (s *Server) run(w http.ResponseWriter, dev DeviceEntry, changes []Change) {
 		writeErr(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	s.execute(w, dev, changes)
+}
+
+// execute backs up the app list, then applies changes that were already
+// checked. Caller holds s.mu.
+func (s *Server) execute(w http.ResponseWriter, dev DeviceEntry, changes []Change) {
 	states, err := readStates(s.be, dev.Serial, s.cat)
 	if err != nil {
 		writeErr(w, http.StatusBadGateway, err.Error())
@@ -322,7 +349,7 @@ func (s *Server) run(w http.ResponseWriter, dev DeviceEntry, changes []Change) {
 	}
 	results := make([]Result, 0, len(changes))
 	for _, ch := range changes {
-		results = append(results, applyChange(s.be, dev.Serial, ch))
+		results = append(results, applyChange(s.be, s.cat, dev.Serial, ch))
 	}
 	writeJSON(w, http.StatusOK, applyResp{Results: results, Backup: backup})
 }
@@ -356,8 +383,12 @@ func (s *Server) handleRestoreAll(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadGateway, err.Error())
 		return
 	}
+	// Google has its own Bring Google back; Restore all leaves it alone.
 	var changes []Change
 	for _, a := range s.cat.all() {
+		if s.cat.group(a.ID) == groupGoogle {
+			continue
+		}
 		switch states[a.ID] {
 		case stateRemoved:
 			changes = append(changes, Change{ID: a.ID, Action: actRestore})

@@ -14,7 +14,7 @@
 <div class="help-page">
 
   <header class="help-head">
-    <img src="icon.svg" alt="" width="48" height="48">
+    <a class="help-home" id="homeLink" href="./" title="Back to the app" aria-label="Back to the app"><img src="icon.svg" alt="" width="48" height="48"></a>
     <h1>Help and FAQ</h1>
     <p class="help-lede">How to connect the C69 M Star, use the app, and fix the usual problems.</p>
     <nav class="help-toc" aria-label="On this page">
@@ -24,6 +24,7 @@
       <a href="#files">Files</a>
       <a href="#sleep">Sleep picture</a>
       <a href="#play">Google Play</a>
+      <a href="#degoogle">De-Google</a>
       <a href="#faq">Questions</a>
       <a href="#linux">Linux</a>
       <a href="#report">Report a problem</a>
@@ -39,6 +40,22 @@
       <li>When the tablet asks <strong>Allow USB debugging?</strong>, tap <strong>Allow</strong> and tick <strong>Always allow from this computer</strong>.</li>
       <li>Back in the app, the dot next to <strong>Connected</strong> fills in. Press <strong>Refresh</strong> to check straight away.</li>
     </ol>
+    <h3 id="wifi">Use Wi-Fi instead of the cable</h3>
+    <p>The tablet and your computer must be on the same Wi-Fi network.</p>
+    <ul>
+      <li><strong>Start with USB</strong> (works on any firmware). Connect with the cable, press <strong>Switch to Wi-Fi</strong> in the left panel, then unplug. This lasts until the tablet restarts.</li>
+      <li><strong>No cable: wireless debugging</strong> (Android 11 and newer, only if your firmware shows Developer options). Turn on <strong>Wireless debugging</strong>, tap <strong>Pair device with pairing code</strong>, and type the address and code under <strong>Or connect over Wi-Fi</strong>. If the tablet doesn't connect by itself, type the <strong>IP address &amp; Port</strong> from the Wireless debugging screen and press <strong>Connect</strong>.</li>
+    </ul>
+    <p><strong>How to turn on wireless debugging:</strong></p>
+    <ol class="steps">
+      <li>Join the same Wi-Fi network on the tablet and on your computer.</li>
+      <li>Turn on Developer options: open <strong>Settings</strong>, then <strong>About tablet</strong>, and tap <strong>Build number</strong> seven times until it says you're a developer. On some Boox firmware it's the version number instead.</li>
+      <li>Open <strong>Developer options</strong>. It's usually under <strong>Settings &rsaquo; System</strong>, or search Settings for "developer".</li>
+      <li>Turn on <strong>Wireless debugging</strong> and tap <strong>Allow</strong> for this network.</li>
+      <li>Tap the words <strong>Wireless debugging</strong> (not the switch) to open its screen. It shows the <strong>IP address &amp; Port</strong> and a <strong>Pair device with pairing code</strong> button.</li>
+    </ol>
+    <p>Wireless debugging turns itself off when the tablet restarts or changes network, and gets a new port each time. You only need to pair once per computer. If your firmware has no Developer options, use the USB way.</p>
+    <p>Over Wi-Fi, installing big apps takes longer, and restarting the tablet drops the connection.</p>
     <p>If the app says <strong>Install Android platform tools</strong>, adb is missing. Press <strong>Download Android platform tools</strong> on that screen. It fetches Google's official tools into the app's own folder, with no admin rights needed. Or <a href="https://developer.android.com/tools/releases/platform-tools" target="_blank" rel="noopener noreferrer">download it from Google</a>, then press Refresh.</p>
   </section>
 
@@ -103,7 +120,7 @@
     <h2>Google Play</h2>
     <p>If the left panel says <strong>Google Play: Play Store missing</strong>, your firmware came without the Play Store. Download Google's Play Store APK (the <strong>nodpi</strong> version), for example from <a href="https://www.apkmirror.com/apk/google-inc/google-play-store/" target="_blank" rel="noopener noreferrer">APKMirror</a>, and choose it with <strong>Install Play Store</strong>. The app only installs it if it's signed by Google's Play Store key, or by the same key as the Google apps on your tablet. Choose a plain <code>.apk</code>, not an XAPK bundle.</p>
     <p>If it says <strong>Google Play: off</strong>, press <strong>Turn on Google Play</strong>, then restart the tablet. It only turns on the parts that are off.</p>
-    <p>The Star Education firmware isn't certified by Google, so Play Store may say <strong>This device isn't Play Protect certified</strong>. Debloating doesn't cause it: the app never removes Google Play, Play services or Google Services Framework.</p>
+    <p>The Star Education firmware isn't certified by Google, so Play Store may say <strong>This device isn't Play Protect certified</strong>. Debloating doesn't cause it: only <a href="#degoogle">De-Google</a> removes Google Play, Play services or Google Services Framework, and only when you ask.</p>
     <ol class="steps">
       <li>Sign in to a Google account on the tablet, or open Play Store once.</li>
       <li>Get the tablet's GSF ID. In Terminal or PowerShell, run:
@@ -117,6 +134,15 @@
     <h3>Turn off Play Protect scanning</h3>
     <p>Once Play Store works, Play Protect may warn about or block apps you install yourself, like Aurora Store or KOReader. To stop that: open <strong>Play Store</strong>, tap your profile picture, then <strong>Play Protect</strong>, then the settings (gear) icon, and turn off <strong>Scan apps with Play Protect</strong>. You can turn it back on the same way.</p>
     <p>Clearing Play services' data signs you out of Google on the tablet. A factory reset or firmware update gives the tablet a new GSF ID, so register again after one.</p>
+  </section>
+
+  <section id="degoogle">
+    <h2>De-Google</h2>
+    <p>The <strong>Google</strong> group in the Debloat list holds Google Play Store, Google Play services, Google Services Framework, and the small Google apps the Play Store installs by itself. <strong>De-Google…</strong> removes them for your user. The three main ones always go together; tick <strong>Keep</strong> next to any small one you want to keep. The dialog lists what will be removed and keeps the <strong>De-Google</strong> button greyed out for 10 seconds. A backup of your app list is saved first.</p>
+    <p><strong>Apps that rely on Google services may not work</strong> afterwards: Play Store apps that need Google to run, push notifications, Sign in with Google, and some banking, streaming and messaging apps. If a Google account is signed in, Android signs it out and removes it from the tablet; sign in again after bringing Google back.</p>
+    <p>Alternatives that work without Google: <a href="https://f-droid.org/packages/com.aurora.store/" target="_blank" rel="noopener noreferrer">Aurora Store</a> (free apps from Google Play, no account needed), <a href="https://f-droid.org/" target="_blank" rel="noopener noreferrer">F-Droid</a> and <a href="https://github.com/ImranR98/Obtainium/releases/latest" target="_blank" rel="noopener noreferrer">Obtainium</a>.</p>
+    <p><strong>To undo it</strong>, press <strong>Bring Google back</strong>. Play services and the framework come back with their data, so your registered GSF ID still works. The Play Store was installed after the firmware, so removing it deletes its files: install it again with <strong>Install Play Store</strong>, then restart the tablet and sign in to Google again. The small Google apps come back when the Play Store reinstalls them. <strong>Restore all apps</strong> leaves Google alone.</p>
+    <p>Whatever you choose, the app never removes anything the tablet needs to work, like WebView, the permission controller, the package installer or the keyboard.</p>
   </section>
 
   <section id="faq">
@@ -145,6 +171,11 @@
     <details>
       <summary>The app says "Plug in your tablet" and nothing happens</summary>
       <p>Check that USB Debug Mode is on and that the cable carries data, then press <strong>Refresh</strong>. Try a different USB port. Running <code>adb devices</code> in a terminal shows whether your computer can see the tablet.</p>
+    </details>
+
+    <details>
+      <summary>Wi-Fi won't connect</summary>
+      <p>Check that the tablet and computer are on the same network, and that the port matches what the tablet shows now: wireless debugging picks a new port each time it's turned on. Some guest and office networks block devices from reaching each other. The cable always works as a fallback.</p>
     </details>
 
     <details>
@@ -201,5 +232,15 @@
     </a>
   </footer>
 </div>
+<script>
+// The app's address needs this run's token, which the app keeps in local
+// storage for its own address only. Without it, the icon opens the start page.
+(function () {
+  try {
+    var t = localStorage.getItem("boox-debloat-token");
+    if (t && /^[0-9a-f]+$/.test(t)) document.getElementById("homeLink").href = "./#" + t;
+  } catch (e) { /* storage blocked: plain link */ }
+})();
+</script>
 </body>
 </html>

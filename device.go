@@ -23,6 +23,10 @@ const (
 	actRestore = "restore"
 	actDisable = "disable"
 	actEnable  = "enable"
+	// actRemoveKeep removes for user 0 but keeps the app's data, so the
+	// GSF ID survives if Google comes back. Only De-Google uses it; the
+	// API never accepts it from the page.
+	actRemoveKeep = "remove-keep-data"
 )
 
 // Change is one requested action on one app.
@@ -69,6 +73,13 @@ func readStates(b Backend, serial string, c *Catalog) (map[string]string, error)
 	if err != nil {
 		return nil, err
 	}
+	// Apps installed after the firmware (like Play Store here) lose their
+	// APK when removed: Android keeps only a record and the data, and
+	// install-existing can't bring them back. Count those as missing.
+	added, err := listPackages(b, serial, "-u", "-3")
+	if err != nil {
+		return nil, err
+	}
 	states := map[string]string{}
 	for _, a := range c.all() {
 		switch {
@@ -76,7 +87,7 @@ func readStates(b Backend, serial string, c *Catalog) (map[string]string, error)
 			states[a.ID] = stateEnabled
 		case disabled[a.ID]:
 			states[a.ID] = stateDisabled
-		case everything[a.ID]:
+		case everything[a.ID] && !added[a.ID]:
 			states[a.ID] = stateRemoved
 		default:
 			states[a.ID] = stateMissing
@@ -118,6 +129,9 @@ func validate(c *Catalog, changes []Change) error {
 		case actRestore, actEnable:
 			// Allowed for every listed app.
 		case actRemove:
+			if g == groupGoogle {
+				return fmt.Errorf("%s is removed with De-Google, together with the rest of Google", ch.ID)
+			}
 			if g != groupRemove {
 				return fmt.Errorf("%s can't be removed with this tool", ch.ID)
 			}
@@ -132,13 +146,22 @@ func validate(c *Catalog, changes []Change) error {
 	return nil
 }
 
-// applyChange runs one change and checks adb's answer.
-func applyChange(b Backend, serial string, ch Change) Result {
+// applyChange runs one change and checks adb's answer. It refuses to remove
+// or turn off anything the tablet needs, whatever the caller asked.
+func applyChange(b Backend, c *Catalog, serial string, ch Change) Result {
+	switch ch.Action {
+	case actRemove, actRemoveKeep, actDisable:
+		if c.kept(ch.ID) {
+			return Result{ID: ch.ID, Action: ch.Action, Message: "The tablet needs this app, so it's always kept."}
+		}
+	}
 	var args []string
 	var want string
 	switch ch.Action {
 	case actRemove:
 		args, want = []string{"pm", "uninstall", "--user", "0", ch.ID}, "Success"
+	case actRemoveKeep:
+		args, want = []string{"pm", "uninstall", "-k", "--user", "0", ch.ID}, "Success"
 	case actRestore:
 		args, want = []string{"cmd", "package", "install-existing", ch.ID}, "installed for user"
 	case actDisable:
@@ -153,6 +176,14 @@ func applyChange(b Backend, serial string, ch Change) Result {
 		r.OK = true
 	} else if err != nil && out == "" {
 		r.Message = err.Error()
+	}
+	// install-existing says "installed" even when only a record is left
+	// and the APK is gone. Check the app really has its files.
+	if r.OK && ch.Action == actRestore {
+		if p, _ := b.Shell(serial, "pm", "path", ch.ID); !strings.Contains(p, "package:") {
+			r.OK = false
+			r.Message = "This app was installed after the firmware, so removing it deleted it. Install it again from its APK."
+		}
 	}
 	return r
 }

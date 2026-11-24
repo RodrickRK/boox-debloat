@@ -16,6 +16,7 @@
     "group": "Web and home screen",
     "apps": [
       { "name": "EinkBro", "ids": ["info.plateaukao.einkbro", "info.plateaukao.einkbro.g"], "why": "Web browser built for e-ink: page-turn scrolling and no animations.", "source": "F-Droid", "url": "https://f-droid.org/packages/info.plateaukao.einkbro/" },
+      { "name": "Readblio", "ids": ["com.woody.pebbledesk"], "why": "Home screen built for e-ink that puts the book you're reading front and centre, with a reading-time log.", "source": "GitHub", "url": "https://readblio.github.io/en/" },
       { "name": "inkOS", "ids": ["app.inkos"], "why": "Text-only home screen that is light and easy to read on e-ink.", "source": "GitHub", "url": "https://github.com/gezimos/inkOS/releases/latest" },
       { "name": "Key Mapper", "ids": ["io.github.sds100.keymapper"], "why": "Give the Back and volume buttons new actions, like turning pages.", "source": "F-Droid", "url": "https://f-droid.org/packages/io.github.sds100.keymapper/" }
     ]

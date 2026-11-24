@@ -4,6 +4,9 @@
 // computer: the address fragment isn't sent with requests.
 const token = location.hash.slice(1);
 
+// Remember the token so the Help page's icon can link back here.
+try { if (token) localStorage.setItem("boox-debloat-token", token); } catch (_) { /* storage blocked */ }
+
 // A new address from the app means a new token: start fresh.
 window.addEventListener("hashchange", () => location.reload());
 
@@ -11,7 +14,8 @@ const $ = (id) => document.getElementById(id);
 
 const state = {
   status: null,
-  apps: null,      // { remove, disable, protected }
+  apps: null,      // { remove, disable, protected, google, googleAccount }
+  keepGoogle: new Set(), // Google extras to keep when de-Googling
   pending: new Map(), // id -> action
   busy: false,
   picture: null,   // File
@@ -199,6 +203,7 @@ function renderDevice(status) {
     return;
   }
   show("restartBox", true);
+  show("wifiBtn", !status.wifi && !status.demo);
   show("views", true);
   $("deviceName").textContent = status.model === "C69_M_STAR" ? "C69 M Star" : status.model || "Android device";
   const fw = (status.firmware.match(/(\d+\.\d+\.\d+)/) || [])[1] || status.firmware;
@@ -212,7 +217,7 @@ function renderDevice(status) {
 // The line under the tablet's name: a dot, what's happening, and Refresh.
 function renderConnection(status, connected) {
   let text;
-  if (connected) text = "Connected";
+  if (connected) text = status.wifi ? "Connected over Wi-Fi" : "Connected";
   else if (status.expired || status.stopped) text = "Not connected to the app";
   else if (status.adb === false) text = "adb isn't installed";
   else if (status.state === "unauthorized") text = "Waiting for USB permission";
@@ -267,6 +272,7 @@ async function refreshStatus() {
 
   const connected = token && status.adb && status.state === "device";
   show("message", !connected);
+  showWifi(status, connected);
   showView(connected);
   if (!connected) {
     renderMessage(status);
@@ -746,6 +752,8 @@ function render() {
   $("removeList").replaceChildren(...remove.map(appRow));
   $("disableList").replaceChildren(...disable.map(appRow));
   $("protectedList").replaceChildren(...keep.map(appRow));
+  const google = tag(state.apps.google || [], "google");
+  renderGoogle(google);
 
   // Sleep screen health: the apps it needs must be enabled.
   const needed = ["com.onyx", "com.onyx.android.ksync", "com.onyx.screenmanager", "com.android.providers.media"];
@@ -757,7 +765,7 @@ function render() {
     ? `Sleep screen: needs ${broken.map((a) => a.name).join(" and ")}. Bring it back under Always kept.`
     : "Sleep screen: ready";
 
-  renderPlay(keep);
+  renderPlay(google);
 
   const supported = state.status && state.status.supported;
   const removable = remove.filter((a) => installed(a.state) && state.pending.get(a.id) !== "remove");
@@ -773,30 +781,36 @@ function render() {
 // Google Play: Boox ships it turned off. Offer to turn it on only when it isn't.
 const playIds = ["com.google.android.gsf", "com.google.android.gms", "com.android.vending"];
 
-function renderPlay(keep) {
-  const apps = keep.filter((a) => playIds.includes(a.id));
+function renderPlay(google) {
+  const apps = google.filter((a) => playIds.includes(a.id));
   const box = $("playStatus");
   const btn = $("enablePlay");
   box.hidden = false;
   const byId = Object.fromEntries(apps.map((a) => [a.id, a.state]));
   const has = (id) => byId[id] && byId[id] !== "missing";
-  let text, off = false, needStore = false;
+  const present = apps.filter((a) => a.state !== "missing");
+  // Off: something that's on the tablet isn't turned on. The Play Store
+  // can be missing at the same time (removed, or never in the firmware).
+  const off = present.some((a) => a.state !== "enabled");
+  const needStore = !has("com.android.vending");
+  let text;
   if (!has("com.google.android.gms") || !has("com.google.android.gsf")) {
     text = "Google Play: not on this firmware";
-  } else if (!has("com.android.vending")) {
+  } else if (present.every((a) => a.state === "removed")) {
+    text = "Google: removed";
+  } else if (off) {
+    text = needStore ? "Google Play: off, Play Store missing" : "Google Play: off";
+  } else if (needStore) {
     text = "Google Play: Play Store missing";
-    needStore = true;
-  } else if (apps.every((a) => a.state === "enabled")) {
-    text = "Google Play: on";
   } else {
-    text = "Google Play: off";
-    off = true;
+    text = "Google Play: on";
   }
   $("playText").textContent = text;
   box.classList.toggle("off", off || needStore);
-  btn.hidden = !off;
+  btn.hidden = !off || !has("com.google.android.gms") || !has("com.google.android.gsf");
   btn.disabled = !(state.status && state.status.supported) || state.busy;
-  $("playInstall").hidden = !needStore;
+  // Offer the Play Store APK once Play services and the framework are on.
+  $("playInstall").hidden = !needStore || off || !has("com.google.android.gms");
   $("playInput").disabled = !(state.status && state.status.supported) || state.busy;
 }
 
@@ -821,6 +835,96 @@ $("playInput").addEventListener("change", async (e) => {
     state.busy = false;
     await loadApps();
   }
+});
+
+// ---------------------------------------------------------------------------
+// Google: De-Google and Bring Google back
+// ---------------------------------------------------------------------------
+
+const googleStateText = { enabled: "On", disabled: "Off", removed: "Removed", missing: "Not on tablet" };
+
+function renderGoogle(google) {
+  const supported = !!(state.status && state.status.supported);
+  $("googleList").replaceChildren(...google.map((app) => {
+    const text = el("div", { class: "row-text" },
+      el("span", { class: "row-name" }, app.name),
+      el("span", { class: "row-why" }, app.why),
+      el("span", { class: "row-id" }, app.id));
+    // Extras that are still on can be kept when de-Googling.
+    if (!app.core && installed(app.state)) {
+      const box = el("input", {
+        type: "checkbox",
+        checked: state.keepGoogle.has(app.id),
+        disabled: !supported,
+        onchange: (e) => {
+          if (e.target.checked) state.keepGoogle.add(app.id); else state.keepGoogle.delete(app.id);
+        },
+      });
+      return el("li", { class: "row" }, text, el("label", { class: "google-keep" }, box, "Keep"));
+    }
+    const cls = app.state === "missing" ? "row missing" : "row locked";
+    return el("li", { class: cls }, text, el("span", { class: "google-state" }, googleStateText[app.state] || app.state));
+  }));
+  const core = google.filter((a) => a.core);
+  const anyOn = google.some((a) => installed(a.state));
+  const coreGone = core.length > 0 && core.some((a) => a.state === "removed" || a.state === "disabled" || (a.id === "com.android.vending" && a.state === "missing"));
+  $("degoogle").disabled = !supported || !anyOn || state.busy;
+  $("googleBack").hidden = !coreGone;
+  $("googleBack").disabled = !supported || state.busy;
+  $("googleGroup").hidden = google.length === 0;
+}
+
+// The three alternatives that work without Google on this tablet.
+const googleAlternatives = [
+  ["Aurora Store", "https://f-droid.org/packages/com.aurora.store/", "gets free apps from Google Play without a Google account"],
+  ["F-Droid", "https://f-droid.org/", "a store of free, open-source apps"],
+  ["Obtainium", "https://github.com/ImranR98/Obtainium/releases/latest", "installs and updates apps straight from their developers' pages"],
+];
+
+$("degoogle").addEventListener("click", async () => {
+  const google = state.apps.google || [];
+  const going = google.filter((a) => installed(a.state) && (a.core || !state.keepGoogle.has(a.id)));
+  if (!going.length) return;
+  const body = [
+    el("p", {}, "These come off the tablet:"),
+    el("ul", {}, going.map((a) => el("li", {}, a.name))),
+    el("p", { class: "dialog-warn" }, el("strong", {}, "Apps that rely on Google services may not work. "),
+      "That includes apps from the Play Store that need Google to run, push notifications, Sign in with Google, and some banking, streaming and messaging apps."),
+  ];
+  if (state.apps.googleAccount) {
+    body.push(el("p", { class: "dialog-warn" }, "A Google account is signed in on this tablet. It will be signed out and removed from the tablet; sign in again if you bring Google back."));
+  }
+  body.push(
+    el("p", {}, "Instead of the Play Store you can use:"),
+    el("ul", { class: "alts" }, googleAlternatives.map(([name, url, why]) =>
+      el("li", {}, el("a", { href: url, target: "_blank", rel: "noopener noreferrer" }, name), " – ", why))),
+    el("p", { class: "row-why" }, "Bring Google back turns Play services and the framework on again with their data, so your GSF ID stays registered. The Play Store needs installing again from its APK."));
+  const note = "Your current app list is saved as a backup first.";
+  if (!(await confirmDialog("De-Google this tablet?", body, "De-Google", { note, countdown: 10 }))) return;
+  await apply(() => postJSON("degoogle", { keep: [...state.keepGoogle] }));
+});
+
+$("googleBack").addEventListener("click", async () => {
+  const google = state.apps.google || [];
+  const byId = Object.fromEntries(google.map((a) => [a.id, a.state]));
+  const storeMissing = byId["com.android.vending"] === "missing";
+  const toTurnOn = google.filter((a) => a.core && (a.state === "removed" || a.state === "disabled"));
+  const storeStep = el("p", {}, "The Play Store was removed with its files, so install it again afterwards with ",
+    el("strong", {}, "Install Play Store"), " in the left panel.");
+  if (!toTurnOn.length) {
+    // Only the Play Store is missing: that's the APK step.
+    showResult([storeStep]);
+    return;
+  }
+  const body = [
+    el("p", {}, "Turns these on again, with the data they had:"),
+    el("ul", {}, toTurnOn.map((a) => el("li", {}, a.name))),
+  ];
+  if (storeMissing) body.push(storeStep);
+  body.push(el("p", { class: "row-why" }, "Afterwards, restart the tablet and sign in to Google again. The Play Store reinstalls the small Google extras by itself."));
+  const note = "Your current app list is saved as a backup first.";
+  if (!(await confirmDialog("Bring Google back?", body, "Bring Google back", { note }))) return;
+  await apply(() => postJSON("enable-play"));
 });
 
 $("enablePlay").addEventListener("click", async () => {
@@ -865,17 +969,46 @@ const groupTitles = {
   enable: "Turn on",
 };
 
-function confirmDialog(title, body, okText, { cancelText = "Cancel", note = "" } = {}) {
+// countdown: the OK button stays off for this many seconds, counting down,
+// so a serious change can't be confirmed by reflex. Cancel always works.
+function confirmDialog(title, body, okText, { cancelText = "Cancel", note = "", countdown = 0 } = {}) {
   $("dialogTitle").textContent = title;
   $("dialogBody").replaceChildren(...body);
-  $("dialogOk").textContent = okText;
+  const ok = $("dialogOk");
+  ok.textContent = okText;
+  ok.disabled = false;
   $("dialogCancel").textContent = cancelText;
   $("dialogNote").textContent = note;
   $("dialogNote").hidden = !note;
   const dialog = $("dialog");
+  let timer = null;
+  let ready = countdown <= 0;
+  if (!ready) {
+    let left = countdown;
+    ok.disabled = true;
+    ok.textContent = `${okText} (${left})`;
+    timer = setInterval(() => {
+      left -= 1;
+      if (left > 0) {
+        ok.textContent = `${okText} (${left})`;
+      } else {
+        clearInterval(timer);
+        ready = true;
+        ok.disabled = false;
+        ok.textContent = okText;
+      }
+    }, 1000);
+  }
   return new Promise((resolve) => {
-    dialog.addEventListener("close", () => resolve(dialog.returnValue === "ok"), { once: true });
+    dialog.addEventListener("close", () => {
+      clearInterval(timer);
+      ok.disabled = false;
+      // Enter or a stray click can't get past a running countdown.
+      resolve(dialog.returnValue === "ok" && ready);
+    }, { once: true });
+    dialog.returnValue = "";
     dialog.showModal();
+    if (countdown > 0) $("dialogCancel").focus();
   });
 }
 
@@ -928,7 +1061,7 @@ async function askToRestart() {
 }
 
 function setBusy(on, text) {
-  for (const id of ["review", "restoreAll", "removeAll", "discard", "enablePlay"]) $(id).disabled = on;
+  for (const id of ["review", "restoreAll", "removeAll", "discard", "enablePlay", "degoogle", "googleBack"]) $(id).disabled = on;
   if (on) $("review").textContent = text;
   document.body.style.cursor = on ? "progress" : "";
 }
@@ -972,7 +1105,116 @@ async function reboot() {
 
 $("restartBtn").addEventListener("click", async () => {
   const body = [el("p", {}, "The tablet turns off and on again, which takes about a minute. This page reconnects by itself.")];
+  if (state.status && state.status.wifi) {
+    body[0] = el("p", {}, "The tablet turns off and on again, which takes about a minute.");
+    body.push(el("p", {}, el("strong", {}, "You're connected over Wi-Fi."), " The connection drops when the tablet restarts. Afterwards, connect again over Wi-Fi, or plug in the cable."));
+  }
   if (await confirmDialog("Restart the tablet?", body, "Restart tablet")) await reboot();
+});
+
+// ---------------------------------------------------------------------------
+// Wi-Fi
+// ---------------------------------------------------------------------------
+
+let wifiScanTimer = null;
+
+// The Wi-Fi section shows while no tablet is connected. While it's open,
+// the page looks for tablets announcing wireless debugging on the network.
+function showWifi(status, connected) {
+  const visible = !connected && !!token && status.adb && !status.expired && !status.stopped && status.state !== "nopermission";
+  show("wifi", visible);
+  if (visible && !wifiScanTimer) {
+    scanWifi();
+    wifiScanTimer = setInterval(scanWifi, 5000);
+  } else if (!visible && wifiScanTimer) {
+    clearInterval(wifiScanTimer);
+    wifiScanTimer = null;
+  }
+}
+
+function wifiMessage(text, bad = false) {
+  const msg = $("wifiMsg");
+  msg.textContent = text;
+  msg.classList.toggle("bad", bad);
+  msg.hidden = !text;
+}
+
+// Offers what adb found on the network as one-tap buttons that fill the
+// address fields. Pairing ports change each time the pairing window opens.
+async function scanWifi() {
+  let services = [];
+  try { services = (await api("wifi/scan")).services || []; } catch (_) { /* best effort */ }
+  const box = $("wifiFound");
+  const key = services.map((s) => s.kind + s.addr).join(",");
+  if (box.dataset.key === key) return;
+  box.dataset.key = key;
+  if (!services.length) { box.hidden = true; box.replaceChildren(); return; }
+  const fill = (svc) => () => {
+    const input = svc.kind === "pair" ? $("pairAddr") : $("connectAddr");
+    input.value = svc.addr;
+    (svc.kind === "pair" ? $("pairCode") : input).focus();
+  };
+  box.replaceChildren("Found on your network:",
+    ...services.map((svc) => el("button", { type: "button", class: "text-button", onclick: fill(svc) },
+      (svc.kind === "pair" ? "Pair " : "Connect ") + svc.addr)));
+  box.hidden = false;
+}
+
+async function wifiSubmit(form, run) {
+  const buttons = form.querySelectorAll("button");
+  buttons.forEach((b) => { b.disabled = true; });
+  try {
+    await run();
+  } catch (err) {
+    wifiMessage(err.message, true);
+  } finally {
+    buttons.forEach((b) => { b.disabled = false; });
+  }
+}
+
+$("pairForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  wifiSubmit(e.target, async () => {
+    wifiMessage("Pairing…");
+    const res = await postJSON("wifi/pair", { addr: $("pairAddr").value, code: $("pairCode").value });
+    $("pairCode").value = "";
+    wifiMessage(res.connected ? "Paired and connected." : "Paired. Waiting for the tablet to connect. If it doesn't within a few seconds, use Connect below.");
+    await refreshStatus();
+  });
+});
+
+$("connectForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  wifiSubmit(e.target, async () => {
+    wifiMessage("Connecting…");
+    const res = await postJSON("wifi/connect", { addr: $("connectAddr").value });
+    wifiMessage("Connected to " + res.addr + ".");
+    await refreshStatus();
+  });
+});
+
+$("wifiBtn").addEventListener("click", async () => {
+  const btn = $("wifiBtn");
+  const note = $("wifiNote");
+  btn.disabled = true;
+  btn.textContent = "Switching…";
+  note.classList.remove("bad");
+  note.textContent = "Turning on Wi-Fi debugging on the tablet.";
+  note.hidden = false;
+  try {
+    const res = await postJSON("wifi/switch");
+    note.textContent = res.already
+      ? "Already connected over Wi-Fi."
+      : `Wi-Fi is on at ${res.addr}. You can unplug the cable now. This lasts until the tablet restarts.`;
+    $("connectAddr").value = res.addr;
+    await refreshStatus();
+  } catch (err) {
+    note.classList.add("bad");
+    note.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Switch to Wi-Fi";
+  }
 });
 
 // ---------------------------------------------------------------------------

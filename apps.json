@@ -32,9 +32,14 @@
     { "id": "com.simplemobiletools.gallery", "name": "Boox Gallery", "why": "Opens pictures for the file browser" },
     { "id": "com.android.providers.media", "name": "Media index", "why": "The sleep screen only sees indexed pictures" },
     { "id": "com.android.providers.media.module", "name": "Media index module", "why": "The sleep screen only sees indexed pictures" },
-    { "id": "com.onyx.android.onyxotaservice", "name": "Onyx updates", "why": "Gets firmware updates from Onyx" },
-    { "id": "com.android.vending", "name": "Google Play Store", "why": "Installs and checks apps" },
-    { "id": "com.google.android.gms", "name": "Google Play services", "why": "Many apps need it to run" },
-    { "id": "com.google.android.gsf", "name": "Google Services Framework", "why": "Holds the ID used for Google certification" }
+    { "id": "com.onyx.android.onyxotaservice", "name": "Onyx updates", "why": "Gets firmware updates from Onyx" }
+  ],
+  "google": [
+    { "id": "com.android.vending", "name": "Google Play Store", "why": "Installs and updates apps from Google", "core": true },
+    { "id": "com.google.android.gms", "name": "Google Play services", "why": "Many Google and Play apps need it to run", "core": true, "keepData": true },
+    { "id": "com.google.android.gsf", "name": "Google Services Framework", "why": "Holds the ID used for Google certification", "core": true, "keepData": true },
+    { "id": "com.google.android.safetycore", "name": "Android System SafetyCore", "why": "Google's on-device scanning for sensitive content. Installed by Play" },
+    { "id": "com.google.android.contactkeys", "name": "Android System Key Verifier", "why": "Checks contacts' encryption keys for Google apps. Installed by Play" },
+    { "id": "com.google.android.verifier", "name": "Google verifier", "why": "A Google helper installed by Play. Not needed without Google" }
   ]
 }
