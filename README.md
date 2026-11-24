@@ -101,6 +101,12 @@ Wireless debugging turns itself off when the tablet restarts or changes network,
 
 Over Wi-Fi, installing big apps takes longer, and restarting the tablet drops the connection.
 
+**Why does wireless debugging keep turning off?** That's Android being careful: it switches wireless debugging off whenever the tablet restarts or Wi-Fi disconnects, even briefly, and picks a new port when you turn it back on. Boox tablets also turn Wi-Fi off when the screen sleeps to save battery, which takes wireless debugging down with it. To make it last longer:
+
+- Turn off the Boox power setting that switches Wi-Fi off in standby (it costs some battery), or set a longer auto-sleep time while you use the app.
+- Use **Switch to Wi-Fi** from USB instead. It doesn't depend on the wireless debugging switch and lasts until the tablet restarts. Reserving the tablet's IP address in your router keeps the address the same.
+- You never need to pair again: turn wireless debugging back on and press **Connect**. The app finds the new port for you.
+
 ## 3. Open the app
 
 In Terminal (Mac), PowerShell (Windows) or a terminal (Linux), run:
@@ -287,6 +293,7 @@ On a Mac, the first run may say the app is from an unidentified developer. Right
 To report a problem, choose **Copy logs** in the left panel, then paste them into [a new issue](https://github.com/RodrickRK/boox-debloat/issues/new) with what you tried. The logs only cover this run of the app. They show just the last four characters of the tablet's serial number and hide your user folder.
 
 - **"Plug in your tablet" doesn't go away.** Check that USB Debug Mode is on and the cable carries data, then press **Refresh**. Run `adb devices` to see whether your computer can see the tablet.
+- **Wireless debugging keeps turning off.** Android switches it off when the tablet restarts or Wi-Fi drops, and Boox turns Wi-Fi off when the screen sleeps. See [Use Wi-Fi instead of the cable](#use-wi-fi-instead-of-the-cable-optional) for how to make it last.
 - **Wi-Fi won't connect.** Check that the tablet and computer are on the same network, and that the port matches what the tablet shows now (wireless debugging picks a new port each time it's turned on). Some guest and office networks block devices from reaching each other.
 - **"More than one device connected".** Another Android device or emulator is connected. Disconnect it, or start the app with `boox-debloat -serial <serial>`. The same tablet over USB and Wi-Fi at once is fine.
 - **"Install Android platform tools".** adb is missing. Press **Download Android platform tools** on that screen, or [download it from Google](https://developer.android.com/tools/releases/platform-tools) and press **Refresh**.
